@@ -55,30 +55,77 @@ export const testarIntegracao = async (id) => {
   }
 };
 
-// Integração para invocar modelos de linguagem (LLM)
-export const InvokeLLM = async (params = {}) => {
+// Invocar modelo de linguagem para processar texto
+export const InvokeLLM = async (params) => {
   try {
-    console.log('InvokeLLM - Parâmetros:', JSON.stringify({
-      prompt: params.prompt?.substring(0, 50) + '...',
-      file_urls: params.file_urls || []
-    }));
-    
-    // Usar a rota de integrations que existe no backend
     const response = await api.post('/integrations/invoke-llm', params);
     return response.data;
   } catch (error) {
-    console.error("Erro ao invocar LLM:", error);
-    throw error.response?.data || { message: 'Erro ao invocar o modelo de linguagem' };
+    console.error('Erro ao invocar LLM:', error);
+    throw error;
   }
 };
 
-// Integração para gerar imagens com IA
-export const GenerateImage = async (prompt, options = {}) => {
+// Gerar imagem usando IA
+export const GenerateImageService = async (params) => {
   try {
-    const response = await api.post('/ia/generate-image', { prompt, ...options });
+    console.log('Chamando serviço de geração de imagem com parâmetros:', params);
+    
+    // Configurar FormData se houver arquivo de imagem de referência
+    if (params.reference_image) {
+      const formData = new FormData();
+      
+      // Adicionar imagem de referência
+      formData.append('reference_image', params.reference_image);
+      
+      // Adicionar demais parâmetros como strings
+      formData.append('prompt', params.prompt);
+      formData.append('size', params.size || '1024x1024');
+      
+      if (params.agente_id) {
+        formData.append('agente_id', params.agente_id);
+      }
+      
+      if (params.use_documents !== undefined) {
+        formData.append('use_documents', params.use_documents.toString());
+      }
+      
+      if (params.text_overlay) {
+        formData.append('text_overlay', params.text_overlay);
+        formData.append('text_position', params.text_position || 'bottom');
+      }
+      
+      console.log('Enviando formData com imagem de referência');
+      
+      const response = await api.post('/integrations/generate-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      
+      return response.data;
+    } else {
+      // Caso não tenha imagem de referência, enviar como JSON normal
+      console.log('Enviando JSON para geração de imagem');
+      
+      const response = await api.post('/integrations/generate-image', params);
+      return response.data;
+    }
+  } catch (error) {
+    console.error('Erro ao gerar imagem:', error);
+    alert('Erro ao gerar imagem: ' + (error.response?.data?.message || error.message || 'Erro desconhecido'));
+    throw error;
+  }
+};
+
+// Obter histórico de imagens geradas
+export const GetGeneratedImages = async (limit = 10) => {
+  try {
+    const response = await api.get(`/integrations/generated-images?limit=${limit}`);
     return response.data;
   } catch (error) {
-    throw error.response?.data || { message: 'Erro ao gerar imagem' };
+    console.error('Erro ao obter imagens geradas:', error);
+    throw error;
   }
 };
 
@@ -221,6 +268,12 @@ export const UploadTrainingDocument = async (agenteId, formData) => {
   } catch (error) {
     throw error.response?.data || { message: 'Erro ao fazer upload do documento de treinamento' };
   }
+};
+
+export default {
+  InvokeLLM,
+  GenerateImageService,
+  GetGeneratedImages
 };
 
 

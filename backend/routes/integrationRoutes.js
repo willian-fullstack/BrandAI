@@ -9,7 +9,9 @@ import {
   testarIntegration,
   uploadTrainingDocument,
   uploadFile,
-  invokeLLM
+  invokeLLM,
+  generateImage,
+  getGeneratedImages
 } from '../controllers/integrationController.js';
 import { protect, admin } from '../middleware/authMiddleware.js';
 
@@ -35,6 +37,12 @@ router.post('/upload-training/:agenteId', admin, uploadTrainingDocument);
 
 // Rota para invocar o modelo de linguagem
 router.post('/invoke-llm', invokeLLM);
+
+// Rota para gerar imagens com IA
+router.post('/generate-image', generateImage);
+
+// Rota para obter imagens geradas pelo usuário
+router.get('/generated-images', getGeneratedImages);
 
 // Rotas para administradores
 router.get('/', admin, getIntegrations);

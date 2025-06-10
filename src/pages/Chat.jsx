@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { User } from "@/api/entities";
 import { Conversa } from "@/api/entities";
 import { AgenteConfig } from "@/api/entities"; // Importar AgenteConfig
-import { InvokeLLM } from "@/api/integrations";
+import { InvokeLLM, GetGeneratedImages } from "@/api/integrations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,12 +14,13 @@ import {
   Bot,
   User as UserIcon,
   Sparkles,
-  AlertCircle
+  AlertCircle,
+  Wand2Icon
 } from "lucide-react";
 import { Link, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { motion, AnimatePresence } from "framer-motion";
-import DesignerInterface from "../components/chat/DesignerInterface"; // Importar DesignerInterface
+import DesignerInterface from "@/components/chat/DesignerInterface"; // Importar DesignerInterface
 import { agentesConfig, planosConfig } from "@/config/agentes"; // Importar agentesConfig e planosConfig do arquivo centralizado
 
 export default function Chat() {
@@ -30,6 +31,8 @@ export default function Chat() {
   const [carregando, setCarregando] = useState(false);
   const [loading, setLoading] = useState(true);
   const [agenteConfigData, setAgenteConfigData] = useState(null); // Novo estado
+  const [previousImages, setPreviousImages] = useState([]);
+  const [showDesignerInterface, setShowDesignerInterface] = useState(false);
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -119,6 +122,16 @@ export default function Chat() {
           const agentesConfigs = await AgenteConfig.filter({ codigo: agenteParam });
           if (agentesConfigs.length > 0) {
             setAgenteConfigData(agentesConfigs[0]);
+
+            // Se for agente de designer, carregar imagens geradas anteriormente
+            if (agenteParam === 'designer') {
+              try {
+                const imagesResult = await GetGeneratedImages(5); // Limite de 5 imagens
+                setPreviousImages(imagesResult.images || []);
+              } catch (error) {
+                console.warn("Erro ao carregar imagens anteriores:", error);
+              }
+            }
           }
         } catch (error) {
           console.warn("Configuração do agente não encontrada:", error);
@@ -472,6 +485,16 @@ Precisa de alguma modificação ou outra imagem?`,
                 Admin
               </Badge>
             )}
+            {(conversa.agente === 'designer' || conversa.agente_id === 'designer') && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-2"
+                onClick={() => setShowDesignerInterface(true)}
+              >
+                <Wand2Icon className="w-4 h-4 mr-1" /> Gerador de Imagens
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -499,7 +522,7 @@ Precisa de alguma modificação ou outra imagem?`,
               </p>
               
               {/* Interface especial para Designer */}
-              {conversa.agente === 'designer' && (
+              {(conversa.agente === 'designer' || conversa.agente_id === 'designer') && (
                 <div className="mt-8 max-w-md mx-auto">
                   <DesignerInterface 
                     onImageGenerated={handleImageGenerated} 
@@ -511,6 +534,31 @@ Precisa de alguma modificação ou outra imagem?`,
             </motion.div>
           )}
 
+          {/* Interface do Designer quando o botão é clicado */}
+          {showDesignerInterface && (conversa.agente === 'designer' || conversa.agente_id === 'designer') && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-8"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">Gerador de Imagens</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowDesignerInterface(false)}
+                >
+                  ✕
+                </Button>
+              </div>
+              <DesignerInterface 
+                onImageGenerated={handleImageGenerated} 
+                user={user} 
+                agenteConfigData={agenteConfigData}
+              />
+            </motion.div>
+          )}
+          
           <AnimatePresence>
             {mensagens.map((mensagem, index) => (
               <motion.div
@@ -610,6 +658,33 @@ Precisa de alguma modificação ou outra imagem?`,
                 user={user} 
                 agenteConfigData={agenteConfigData}
               />
+            </div>
+          )}
+          
+          {conversa.agente_id === 'designer' && previousImages.length > 0 && (
+            <div className="mb-4">
+              <h3 className="text-sm font-medium text-gray-500 mb-2">Imagens recentes</h3>
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {previousImages.map((image, index) => (
+                  <div 
+                    key={image._id || index} 
+                    className="flex-shrink-0 relative cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => {
+                      // Ao clicar na imagem, sugerir um prompt similar
+                      setNovaMensagem(`Crie uma imagem similar a esta que eu gerei antes: ${image.prompt}`);
+                    }}
+                  >
+                    <img 
+                      src={image.image_url} 
+                      alt={`Imagem ${index + 1}`}
+                      className="h-16 w-16 object-cover rounded-md"
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 rounded-md flex items-center justify-center">
+                      <span className="text-white opacity-0 hover:opacity-100">Usar</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           

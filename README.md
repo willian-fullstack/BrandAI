@@ -1,4 +1,84 @@
-# Base44 App
+# BrandAI - Plataforma de IA para Marcas
+
+BrandAI é uma plataforma de inteligência artificial especializada para marcas de roupas, integrando diversos agentes de IA com expertises específicas para auxiliar negócios do setor de moda.
+
+## Características Principais
+
+- **Múltiplos Agentes Especializados**: Design, E-commerce, Experiência de Unboxing, Gestão Financeira, Marketing e muito mais
+- **Sistema de Documentos de Treinamento**: Upload e gerenciamento de documentos para treinar os agentes com conhecimento específico
+- **Interface de Chat**: Comunicação intuitiva com os agentes de IA
+- **Painel Administrativo**: Gerenciamento completo de usuários, planos e configurações
+
+## Correções Recentes
+
+### Correção do Problema de Reconhecimento de Documentos Anexados
+
+Corrigimos um problema crítico onde os documentos anexados não estavam sendo reconhecidos pelo sistema. As seguintes alterações foram implementadas:
+
+1. **Backend (Controllers/integrationController.js)**:
+   - Reimplementação completa da lógica de detecção e processamento de documentos
+   - Adição de múltiplos caminhos alternativos para busca de arquivos
+   - Melhor logging para diagnóstico de problemas
+   - Correção da propagação de IDs de agentes
+
+2. **Frontend (Chat.jsx)**:
+   - Atualização do componente de chat para garantir que o ID do agente seja sempre enviado corretamente
+   - Melhor manipulação de estados para documentos anexados
+   - Logging detalhado para debugging
+
+3. **Utilitários**:
+   - Criação de um sistema robusto de busca recursiva de arquivos
+   - Manipulação correta de diferentes formatos de caminhos
+
+## Estrutura do Projeto
+
+- **/backend**: API Node.js/Express, controladores e modelos
+- **/src**: Frontend React
+  - **/components**: Componentes reutilizáveis
+  - **/pages**: Páginas da aplicação
+  - **/api**: Integração com o backend
+
+## Instalação
+
+### Requisitos
+
+- Node.js 16+
+- MongoDB
+
+### Passos
+
+1. Clone o repositório:
+   ```
+   git clone https://github.com/willian-fullstack/BrandAI.git
+   cd BrandAI
+   ```
+
+2. Instale as dependências:
+   ```
+   npm install
+   cd backend
+   npm install
+   ```
+
+3. Configure as variáveis de ambiente:
+   - Copie `.env.example` para `.env` no diretório backend
+   - Preencha as variáveis necessárias (MongoDB URI, chaves de API, etc.)
+
+4. Inicie o servidor de desenvolvimento:
+   ```
+   # Terminal 1 - Backend
+   cd backend
+   npm run dev
+   
+   # Terminal 2 - Frontend
+   npm run dev
+   ```
+
+## Licença
+
+Este projeto é licenciado sob a licença MIT.
+
+## Base44 App
 
 Aplicação completa com frontend React e backend Node.js para o Base44, uma plataforma de assistentes virtuais baseados em IA.
 
@@ -335,10 +415,6 @@ O frontend se comunica com o backend através de uma camada de API implementada 
 Para mais detalhes sobre a API e suas funcionalidades, consulte a documentação específica:
 
 - [Documentação do Backend](./backend/README.md)
-
-## Licença
-
-Este projeto está licenciado sob a licença MIT.
 
 ## Solução de Problemas
 

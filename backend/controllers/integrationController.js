@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Integration from '../models/Integration.js';
 import User from '../models/User.js';
+import GeneratedImage from '../models/GeneratedImage.js';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -624,5 +625,341 @@ const findAndReadFile = (filePath) => {
     return { found: false, error: 'Arquivo não encontrado' };
   } catch (error) {
     return { found: false, error: error.message };
+  }
+};
+
+// @desc    Gerar imagem com IA
+// @route   POST /api/integrations/generate-image
+// @access  Privado
+export const generateImage = async (req, res) => {
+  try {
+    console.log('Iniciando geração de imagem...');
+    
+    // Obter parâmetros da requisição
+    let { prompt, size, agente_id, use_documents, text_overlay, text_position } = req.body;
+    
+    // Log dos parâmetros recebidos
+    console.log('Parâmetros recebidos:');
+    console.log('- prompt:', prompt?.substring(0, 50) + '...');
+    console.log('- size:', size);
+    console.log('- agente_id:', agente_id);
+    console.log('- use_documents:', use_documents);
+    console.log('- text_overlay:', text_overlay);
+    console.log('- text_position:', text_position);
+    
+    // Se os dados vieram via FormData, eles estarão em campos de string
+    if (typeof use_documents === 'string') {
+      use_documents = use_documents === 'true';
+      console.log('use_documents convertido para boolean:', use_documents);
+    }
+    
+    // Validar prompt
+    if (!prompt) {
+      console.log('Erro: Prompt não fornecido');
+      return res.status(400).json({ message: 'O prompt é obrigatório' });
+    }
+    
+    // Verificar se o tamanho é válido
+    const validSizes = ['1024x1024', '1024x1792', '1792x1024'];
+    if (!size || !validSizes.includes(size)) {
+      console.log(`Tamanho inválido: ${size}, usando tamanho padrão 1024x1024`);
+      size = '1024x1024'; // Tamanho padrão se não for especificado ou for inválido
+    }
+    
+    // Verificar se o usuário tem créditos disponíveis (exceto admin)
+    if (req.user.role !== 'admin') {
+      const user = await User.findById(req.user._id);
+      
+      if (!user) {
+        console.log('Erro: Usuário não encontrado');
+        return res.status(404).json({ message: 'Usuário não encontrado' });
+      }
+      
+      console.log(`Créditos do usuário: ${user.creditos_restantes}`);
+      
+      if (user.creditos_restantes <= 0) {
+        console.log('Erro: Usuário sem créditos suficientes');
+        return res.status(403).json({ 
+          message: 'Você não tem créditos suficientes para usar esta funcionalidade. Faça upgrade do seu plano.' 
+        });
+      }
+      
+      // Descontar um crédito
+      user.creditos_restantes -= 1;
+      await user.save();
+      console.log(`Crédito descontado. Novo saldo: ${user.creditos_restantes}`);
+    } else {
+      console.log('Usuário é admin, sem desconto de créditos');
+    }
+    
+    console.log(`Gerando imagem com prompt: ${prompt.substring(0, 100)}...`);
+    console.log(`Tamanho selecionado: ${size}`);
+    
+    // Processar documentos de treinamento se use_documents for true
+    let conteudoDocumentos = '';
+    let documentosProcessados = [];
+    
+    if (use_documents === true && agente_id) {
+      console.log(`Buscando documentos para o agente: ${agente_id}`);
+      try {
+        const AgenteConfig = mongoose.model('AgenteConfig');
+        const agente = await AgenteConfig.findOne({ codigo: agente_id });
+        
+        if (agente && agente.documentos_treinamento && agente.documentos_treinamento.length > 0) {
+          console.log(`Agente ${agente_id} tem ${agente.documentos_treinamento.length} documentos cadastrados`);
+          
+          // Processar cada documento encontrado no banco de dados
+          for (const documento of agente.documentos_treinamento) {
+            try {
+              console.log(`Processando documento: ${documento.nome} (${documento.caminho})`);
+              
+              // Usar nosso utilitário para encontrar o arquivo
+              const fileResult = findAndReadFile(documento.caminho);
+              
+              if (fileResult.found) {
+                documentosProcessados.push(documento.nome);
+                console.log(`Documento lido com sucesso: ${documento.nome} (${fileResult.content.length} caracteres)`);
+                conteudoDocumentos += `\n\n--- DOCUMENTO: ${documento.nome} ---\n${fileResult.content}\n--- FIM DO DOCUMENTO ---\n`;
+              } else {
+                console.log(`Não foi possível encontrar o documento com o utilitário. Tentando caminhos alternativos...`);
+                // Tentar caminhos alternativos
+                const possiblePaths = [
+                  path.join(__dirname, '..', 'uploads', 'training', agente_id, documento.nome),
+                  path.join(__dirname, '..', 'uploads', 'training', documento.nome),
+                  path.join(__dirname, '..', 'uploads', documento.nome),
+                  path.join(__dirname, '..', documento.caminho.replace(/^\//, ''))
+                ];
+                
+                let encontrado = false;
+                for (const possiblePath of possiblePaths) {
+                  console.log(`Tentando caminho alternativo: ${possiblePath}`);
+                  if (fs.existsSync(possiblePath)) {
+                    const conteudo = fs.readFileSync(possiblePath, 'utf8');
+                    documentosProcessados.push(documento.nome);
+                    console.log(`Documento encontrado em caminho alternativo: ${possiblePath} (${conteudo.length} caracteres)`);
+                    conteudoDocumentos += `\n\n--- DOCUMENTO: ${documento.nome} ---\n${conteudo}\n--- FIM DO DOCUMENTO ---\n`;
+                    encontrado = true;
+                    break;
+                  }
+                }
+                
+                if (!encontrado) {
+                  console.log(`Não foi possível encontrar o arquivo: ${documento.nome} em nenhum dos caminhos testados`);
+                }
+              }
+            } catch (erro) {
+              console.error(`Erro ao processar documento ${documento.nome}:`, erro);
+            }
+          }
+        } else {
+          console.log(`Agente ${agente_id} não encontrado ou não tem documentos cadastrados`);
+        }
+      } catch (erro) {
+        console.error('Erro ao buscar informações do agente:', erro);
+      }
+    }
+    
+    console.log(`Total de documentos processados: ${documentosProcessados.length}`);
+    if (documentosProcessados.length > 0) {
+      console.log('Documentos processados:', documentosProcessados.join(', '));
+    } else {
+      console.log('Nenhum documento foi processado para esta geração de imagem');
+    }
+    
+    // Verificar se há imagem de referência
+    let imageBase64 = null;
+    
+    if (req.files && req.files.reference_image) {
+      const refImage = req.files.reference_image;
+      console.log(`Imagem de referência recebida: ${refImage.name} (${refImage.size} bytes, ${refImage.mimetype})`);
+      
+      // Converter a imagem para base64
+      imageBase64 = `data:${refImage.mimetype};base64,${refImage.data.toString('base64')}`;
+      console.log('Imagem de referência convertida para Base64');
+    } else {
+      console.log('Nenhuma imagem de referência enviada');
+    }
+    
+    // Fazer chamada para a API da OpenAI
+    const axios = await import('axios');
+    
+    // Obter a chave da API do ambiente
+    const apiKey = process.env.OPENAI_API_KEY;
+    
+    if (!apiKey) {
+      console.error('OPENAI_API_KEY não encontrada no ambiente');
+      return res.status(500).json({ message: 'Configuração da API OpenAI não encontrada' });
+    }
+    
+    // Construir prompt completo com informações dos documentos, se disponíveis
+    let promptCompleto = prompt;
+    
+    // Adicionar texto para incluir na imagem, se especificado
+    if (text_overlay) {
+      promptCompleto += `. Inclua o texto "${text_overlay}" na posição ${
+        text_position === 'top' ? 'superior' : 
+        text_position === 'center' ? 'central' : 
+        'inferior'
+      } da imagem.`;
+      console.log(`Texto a ser incluído na imagem: "${text_overlay}" (posição: ${text_position})`);
+    }
+    
+    if (documentosProcessados.length > 0) {
+      console.log('Incluindo conteúdo dos documentos no prompt');
+      promptCompleto = `Com base nos seguintes documentos de treinamento e design guidelines:\n\n${conteudoDocumentos}\n\nCrie a seguinte imagem: ${promptCompleto}`;
+    }
+    
+    // Configurar a requisição para a API da OpenAI
+    const requestBody = {
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "Você é um assistente especializado em design para marcas de roupa. Crie imagens de alta qualidade e relevantes para o setor de moda."
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: promptCompleto
+            }
+          ]
+        }
+      ],
+      max_tokens: 4096
+    };
+    
+    // Adicionar imagem de referência se disponível
+    if (imageBase64) {
+      console.log('Adicionando imagem de referência à requisição');
+      requestBody.messages[1].content.push({
+        type: "image_url",
+        image_url: {
+          url: imageBase64
+        }
+      });
+    }
+    
+    try {
+      console.log('Fazendo chamada para GPT-4o para processar o prompt');
+      // Primeiro, vamos fazer a chamada para o chat completion para processar o prompt e imagem
+      const chatResponse = await axios.default.post(
+        'https://api.openai.com/v1/chat/completions',
+        requestBody,
+        {
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      // Obter a resposta processada pelo modelo
+      const processedPrompt = chatResponse.data.choices[0].message.content;
+      console.log('Prompt processado pelo GPT-4o:', processedPrompt);
+      
+      console.log('Fazendo chamada para DALL-E 3 para gerar a imagem');
+      // Agora, fazer a chamada para gerar a imagem usando DALL-E 3
+      const imageResponse = await axios.default.post(
+        'https://api.openai.com/v1/images/generations',
+        {
+          model: "dall-e-3",
+          prompt: processedPrompt,
+          n: 1,
+          size: size,
+          quality: "standard"
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      // Extrair URL da imagem gerada
+      const imageUrl = imageResponse.data.data[0].url;
+      console.log('Imagem gerada com sucesso. URL recebida.');
+      
+      // Salvar no banco de dados
+      try {
+        const generatedImage = new GeneratedImage({
+          usuario_id: req.user._id,
+          prompt: prompt,
+          processed_prompt: processedPrompt,
+          image_url: imageUrl,
+          agente_id: agente_id,
+          size: size,
+          used_documents: documentosProcessados,
+          reference_image_used: !!imageBase64,
+          text_overlay: text_overlay || null
+        });
+        
+        await generatedImage.save();
+        console.log(`Imagem salva no banco de dados com ID: ${generatedImage._id}`);
+      } catch (dbError) {
+        console.error('Erro ao salvar imagem no banco de dados:', dbError);
+        // Continuar mesmo se falhar ao salvar no banco de dados
+      }
+      
+      // Retornar a URL da imagem gerada
+      return res.json({
+        success: true,
+        image_url: imageUrl,
+        processed_prompt: processedPrompt
+      });
+      
+    } catch (error) {
+      console.error('Erro ao gerar imagem com OpenAI:', error.response?.data || error.message);
+      return res.status(500).json({ 
+        message: 'Erro ao gerar imagem', 
+        error: error.response?.data || error.message 
+      });
+    }
+    
+  } catch (error) {
+    console.error('Erro ao processar solicitação de geração de imagem:', error);
+    res.status(500).json({ message: 'Erro ao processar solicitação de geração de imagem', error: error.message });
+  }
+};
+
+// @desc    Obter imagens geradas pelo usuário
+// @route   GET /api/integrations/generated-images
+// @access  Privado
+export const getGeneratedImages = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.query.page) || 1;
+    const skip = (page - 1) * limit;
+    
+    // Determinar se deve filtrar por agente
+    const filter = { usuario_id: req.user._id };
+    
+    if (req.query.agente_id) {
+      filter.agente_id = req.query.agente_id;
+    }
+    
+    // Buscar imagens paginadas
+    const images = await GeneratedImage.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+    
+    // Contar total para paginação
+    const total = await GeneratedImage.countDocuments(filter);
+    
+    res.json({
+      images,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao obter imagens geradas:', error);
+    res.status(500).json({ message: 'Erro ao obter imagens geradas' });
   }
 }; 
