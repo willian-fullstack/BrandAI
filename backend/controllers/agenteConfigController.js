@@ -72,6 +72,8 @@ export const criarAgenteConfig = async (req, res) => {
       ativo,
       disponivel_em,
     } = req.body;
+    
+    console.log('Criando agente, dados recebidos:', JSON.stringify(req.body));
 
     // Verificar se já existe um agente com este código
     const agenteExistente = await AgenteConfig.findOne({ codigo });
@@ -131,6 +133,8 @@ export const atualizarAgenteConfig = async (req, res) => {
       ativo,
       disponivel_em,
     } = req.body;
+    
+    console.log('Atualizando agente, dados recebidos:', JSON.stringify(req.body));
     
     // Atualizar campos
     if (nome) agenteConfig.nome = nome;

@@ -115,21 +115,35 @@ export default function Admin() {
 
       // Tentar carregar configurações de agentes (pode não existir ainda)
       try {
+        console.log("Iniciando carregamento dos agentes...");
         const agentesData = await AgenteConfig.getAll();
-        setAgentesConfigs(agentesData);
+        console.log("Dados recebidos da API:", agentesData);
         
-        // Calcular quantos agentes extras existem no banco
-        const agentesFrontend = Object.keys(agentesConfig);
-        const agentesExcedentes = agentesData.filter(
-          agente => !agentesFrontend.includes(agente.codigo)
-        ).length;
-        
-        setSincronizacaoInfo({
-          ...sincronizacaoInfo,
-          agentesExcedentes
-        });
+        if (!agentesData || (Array.isArray(agentesData) && agentesData.length === 0)) {
+          console.log("Nenhum agente encontrado, inicializando array vazio");
+          setAgentesConfigs([]);
+        } else {
+          console.log("Configurando agentes no state:", agentesData);
+          setAgentesConfigs(agentesData);
+          
+          // Calcular quantos agentes extras existem no banco
+          const agentesFrontend = Object.keys(agentesConfig);
+          console.log("Agentes definidos no frontend:", agentesFrontend);
+          
+          const agentesExcedentes = Array.isArray(agentesData) 
+            ? agentesData.filter(agente => !agentesFrontend.includes(agente.codigo)).length
+            : 0;
+          
+          console.log("Agentes excedentes detectados:", agentesExcedentes);
+          
+          setSincronizacaoInfo({
+            ...sincronizacaoInfo,
+            agentesExcedentes
+          });
+        }
       } catch (error) {
-        console.warn("AgenteConfig não encontrado ou erro ao carregar:", error);
+        console.error("Erro ao carregar AgenteConfig:", error);
+        console.error("Detalhes do erro:", error.response || error.message || error);
         setAgentesConfigs([]); // Inicializa como array vazio para evitar erros no map/filter
       }
 
@@ -243,26 +257,27 @@ export default function Admin() {
 
   const handleSalvarAgente = async (agenteConfigParaSalvar) => {
     try {
-      if (agenteConfigParaSalvar.id) {
+      // Sempre usar o código do agente como identificador principal
+      if (agenteConfigParaSalvar.codigo) {
         await AgenteConfig.update(agenteConfigParaSalvar.codigo, {
           ...agenteConfigParaSalvar,
           ultima_atualizacao: new Date().toISOString()
         });
       } else {
-        // Garantir que todos os campos obrigatórios estejam presentes
-        const agenteCompleto = {
-          codigo: agenteConfigParaSalvar.codigo || '',
-          nome: agenteConfigParaSalvar.nome || '',
-          descricao: agenteConfigParaSalvar.descricao || '',
-          instrucoes_sistema: agenteConfigParaSalvar.instrucoes_sistema || '',
-          modelo_ia: agenteConfigParaSalvar.modelo_ia || 'gpt-4o',
-          temperatura: agenteConfigParaSalvar.temperatura || 0.7,
-          max_tokens: agenteConfigParaSalvar.max_tokens || 4000,
-          icon: agenteConfigParaSalvar.icon || 'robot',
-          cor: agenteConfigParaSalvar.cor || '#3B82F6',
-          ativo: agenteConfigParaSalvar.ativo !== undefined ? agenteConfigParaSalvar.ativo : true,
-          ultima_atualizacao: new Date().toISOString()
-        };
+                  // Garantir que todos os campos obrigatórios estejam presentes
+          const agenteCompleto = {
+            codigo: agenteConfigParaSalvar.codigo || '',
+            nome: agenteConfigParaSalvar.nome || '',
+            descricao: agenteConfigParaSalvar.descricao || '',
+            instrucoes_sistema: agenteConfigParaSalvar.instrucoes_sistema || '',
+            modelo_ia: agenteConfigParaSalvar.modelo_ia || 'gpt-4o',
+            temperatura: agenteConfigParaSalvar.temperatura || 0.7,
+            max_tokens: agenteConfigParaSalvar.max_tokens || 4000,
+            icon: agenteConfigParaSalvar.icon || 'robot',
+            cor: agenteConfigParaSalvar.cor || '#3B82F6',
+            ativo: agenteConfigParaSalvar.ativo !== undefined ? agenteConfigParaSalvar.ativo : true,
+            ultima_atualizacao: new Date().toISOString()
+          };
         
         await AgenteConfig.create(agenteCompleto);
       }
@@ -306,6 +321,12 @@ export default function Admin() {
   };
 
   const inicializarAgentes = async () => {
+    console.log("Iniciando função inicializarAgentes...");
+    setSincronizacaoInfo({
+      ...sincronizacaoInfo,
+      sincronizando: true
+    });
+    
     const agentesBase = Object.keys(agentesConfig).map(tipo => ({
       codigo: tipo,
       nome: agentesConfig[tipo].nome,
@@ -337,32 +358,70 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
       ativo: true,
       documentos_treinamento: [],
       status: "ativo",
-      ultima_atualizacao: new Date().toISOString(),
-      prompt_base: agentesConfig[tipo].prompt || ''
+      ultima_atualizacao: new Date().toISOString()
     }));
 
+    console.log("Agentes base preparados:", agentesBase.length);
+    
     try {
-      console.log("Inicializando agentes:", agentesBase.map(a => a.codigo));
-      console.log("Agentes existentes:", agentesConfigs.map(a => a.codigo));
+      console.log("Agentes a inicializar:", agentesBase.map(a => a.codigo).join(", "));
+      
+      // Verificar se existem agentes no banco de dados
+      console.log("Agentes existentes no banco:", 
+        Array.isArray(agentesConfigs) 
+          ? agentesConfigs.map(a => a.codigo).join(", ") || "Nenhum" 
+          : "Nenhum"
+      );
       
       let atualizou = false;
+      let agentesAdicionados = [];
+      
       for (const agente of agentesBase) {
-        const existe = Array.isArray(agentesConfigs) ? agentesConfigs.find(a => a.codigo === agente.codigo) : null;
+        const existe = Array.isArray(agentesConfigs) 
+          ? agentesConfigs.find(a => a.codigo === agente.codigo) 
+          : null;
+          
         if (!existe) {
-          console.log(`Criando agente: ${agente.codigo}`);
-          await AgenteConfig.create(agente);
-          atualizou = true;
+          console.log(`Criando agente no banco: ${agente.codigo}`);
+          try {
+            const resultado = await AgenteConfig.create(agente);
+            console.log(`Agente ${agente.codigo} criado com sucesso:`, resultado);
+            agentesAdicionados.push(agente.codigo);
+            atualizou = true;
+          } catch (err) {
+            console.error(`Erro ao criar agente ${agente.codigo}:`, err);
+          }
+        } else {
+          console.log(`Agente ${agente.codigo} já existe, pulando.`);
         }
       }
+      
       if (atualizou) {
-        loadData();
-        alert("Agentes base inicializados incluindo o novo Designer IA!");
+        console.log("Agentes adicionados:", agentesAdicionados.join(", "));
+        await loadData(); // Recarregar dados após a criação
+        setNotificacao({
+          tipo: 'sucesso',
+          mensagem: `Agentes inicializados com sucesso! Adicionados: ${agentesAdicionados.join(", ")}`
+        });
       } else {
-        alert("Todos os agentes base já estão configurados.");
+        console.log("Nenhum agente novo foi adicionado");
+        setNotificacao({
+          tipo: 'info',
+          mensagem: "Todos os agentes base já estão configurados."
+        });
       }
     } catch (error) {
-      console.error("Erro ao inicializar agentes:", error);
-      alert("Erro ao inicializar agentes: " + (error.message || "Erro desconhecido"));
+      console.error("Erro geral ao inicializar agentes:", error);
+      console.error("Detalhes do erro:", error.response || error.message || error);
+      setNotificacao({
+        tipo: 'erro',
+        mensagem: `Erro ao inicializar agentes: ${error.message || "Erro desconhecido"}`
+      });
+    } finally {
+      setSincronizacaoInfo({
+        ...sincronizacaoInfo,
+        sincronizando: false
+      });
     }
   };
 
@@ -749,91 +808,111 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-              {agentesConfigs.map((config) => (
-                <Card key={config._id} className="overflow-hidden">
-                  <CardHeader className={`bg-gradient-to-r ${config.cor ? '' : 'from-blue-500 to-indigo-600'}`} style={{ background: config.cor ? config.cor : undefined }}>
-                    <CardTitle className="flex justify-between items-center text-white">
-                      <span>{config.nome}</span>
-                      <div className="flex space-x-2">
-                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" onClick={() => setEditandoAgente(config)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" onClick={() => handleExcluirAgente(config)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+              {!agentesConfigs || !Array.isArray(agentesConfigs) || agentesConfigs.length === 0 ? (
+                <div className="col-span-3 p-8 text-center bg-gray-50 rounded-lg">
+                  <div className="flex flex-col items-center justify-center gap-4">
+                    <Bot className="w-12 h-12 text-gray-400" />
+                    <h3 className="text-xl font-medium text-gray-600">Nenhum agente configurado</h3>
+                    <p className="text-gray-500 max-w-md mx-auto">
+                      Parece que ainda não há agentes configurados no sistema. Clique no botão "Inicializar/Verificar Agentes Base" acima para configurar os agentes padrão.
+                    </p>
+                    <Button 
+                      onClick={inicializarAgentes} 
+                      className="mt-2 bg-indigo-600"
+                    >
+                      <Bot className="w-4 h-4 mr-2" />
+                      Inicializar Agentes
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                // Renderizar os cards dos agentes existentes
+                agentesConfigs.map((config) => (
+                  <Card key={config._id} className="overflow-hidden">
+                    <CardHeader className={`bg-gradient-to-r ${config.cor ? '' : 'from-blue-500 to-indigo-600'}`} style={{ background: config.cor ? config.cor : undefined }}>
+                      <CardTitle className="flex justify-between items-center text-white">
+                        <span>{config.nome}</span>
+                        <div className="flex space-x-2">
+                          <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" onClick={() => setEditandoAgente(config)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" onClick={() => handleExcluirAgente(config)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <div className="text-sm text-gray-600 mb-4">{config.descricao}</div>
+                      
+                      <div className="grid grid-cols-2 gap-2 mb-4">
+                        <div className="bg-gray-50 p-2 rounded">
+                          <p className="text-xs text-gray-500">Modelo</p>
+                          <p className="font-semibold">{config.modelo_ia}</p>
+                        </div>
+                        <div className="bg-gray-50 p-2 rounded">
+                          <p className="text-xs text-gray-500">Documentos</p>
+                          <p className="font-semibold">{config?.documentos_treinamento?.length || 0} arquivos</p>
+                        </div>
                       </div>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4">
-                    <div className="text-sm text-gray-600 mb-4">{config.descricao}</div>
-                    
-                    <div className="grid grid-cols-2 gap-2 mb-4">
-                      <div className="bg-gray-50 p-2 rounded">
-                        <p className="text-xs text-gray-500">Modelo</p>
-                        <p className="font-semibold">{config.modelo_ia}</p>
-                      </div>
-                      <div className="bg-gray-50 p-2 rounded">
-                        <p className="text-xs text-gray-500">Documentos</p>
-                        <p className="font-semibold">{config?.documentos_treinamento?.length || 0} arquivos</p>
-                      </div>
-                    </div>
-                    
-                    {/* Documentos de treinamento */}
-                    {config.documentos_treinamento && config.documentos_treinamento.length > 0 && (
-                      <div className="mt-4">
-                        <h4 className="text-sm font-medium mb-2">Documentos de treinamento:</h4>
-                        <div className="space-y-2">
-                          {config.documentos_treinamento.map((doc) => (
-                            <div key={doc._id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                              <div className="flex items-center">
-                                <FileText className="h-4 w-4 mr-2 text-gray-600" />
-                                <span className="text-sm">{doc.nome}</span>
-                                <span className="ml-2 text-xs text-gray-500">
-                                  ({(doc.tamanho / 1024).toFixed(2)} KB)
-                                </span>
+                      
+                      {/* Documentos de treinamento */}
+                      {config.documentos_treinamento && config.documentos_treinamento.length > 0 && (
+                        <div className="mt-4">
+                          <h4 className="text-sm font-medium mb-2">Documentos de treinamento:</h4>
+                          <div className="space-y-2">
+                            {config.documentos_treinamento.map((doc) => (
+                              <div key={doc._id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                                <div className="flex items-center">
+                                  <FileText className="h-4 w-4 mr-2 text-gray-600" />
+                                  <span className="text-sm">{doc.nome}</span>
+                                  <span className="ml-2 text-xs text-gray-500">
+                                    ({(doc.tamanho / 1024).toFixed(2)} KB)
+                                  </span>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-500 hover:text-red-700"
+                                  onClick={() => handleExcluirDocumento(config, doc._id)}
+                                  disabled={uploadingFile}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               </div>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-red-500 hover:text-red-700"
-                                onClick={() => handleExcluirDocumento(config, doc._id)}
-                                disabled={uploadingFile}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
+                      )}
+                      
+                      <div className="mt-4">
+                        <input
+                          type="file"
+                          id={`file-upload-${config._id}`}
+                          className="hidden"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              handleUploadDocumento(e.target.files[0], config);
+                              e.target.value = '';
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor={`file-upload-${config._id}`}
+                          className="flex items-center justify-center w-full p-2 border-2 border-dashed border-gray-300 rounded-md cursor-pointer hover:bg-gray-50"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <Upload className="h-5 w-5 text-gray-400" />
+                            <span className="text-sm text-gray-500">
+                              {uploadingFile ? 'Enviando...' : 'Adicionar documento de treinamento'}
+                            </span>
+                          </div>
+                        </label>
                       </div>
-                    )}
-                    
-                    <div className="mt-4">
-                      <input
-                        type="file"
-                        id={`file-upload-${config._id}`}
-                        className="hidden"
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            handleUploadDocumento(e.target.files[0], config);
-                            e.target.value = '';
-                          }
-                        }}
-                      />
-                      <label
-                        htmlFor={`file-upload-${config._id}`}
-                        className="flex items-center justify-center w-full p-2 border-2 border-dashed border-gray-300 rounded-md cursor-pointer hover:bg-gray-50"
-                      >
-                        <div className="flex items-center space-x-2">
-                          <Upload className="h-5 w-5 text-gray-400" />
-                          <span className="text-sm text-gray-500">
-                            {uploadingFile ? 'Enviando...' : 'Adicionar documento de treinamento'}
-                          </span>
-                        </div>
-                      </label>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
 
             {/* Modal de Edição de Agente */}
@@ -869,7 +948,7 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
                           placeholder="Digite as instruções do sistema para o agente..."
                         />
                       </div>
-
+                      
                       <div>
                         <label className="block text-sm font-medium mb-1">Documentos de Treinamento:</label>
                         <div className="border rounded-lg p-4 space-y-3 bg-slate-50">

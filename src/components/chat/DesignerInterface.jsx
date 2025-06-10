@@ -81,7 +81,7 @@ export default function DesignerInterface({ onImageGenerated, user, agenteConfig
           'inferior'
         } da imagem.`;
       }
-
+      
       // Determinar qual agente está sendo usado
       const agente_id = agenteConfigData?.codigo || 'designer';
       
@@ -90,7 +90,10 @@ export default function DesignerInterface({ onImageGenerated, user, agenteConfig
         prompt: fullPrompt,
         size: imageSize,
         agente_id: agente_id,
-        use_documents: usarDocumentos
+        use_documents: usarDocumentos,
+        language: "pt-BR", // Forçar idioma português
+        preserve_text: true, // Instrução para preservar o texto exatamente como solicitado
+        keep_portuguese: true // Nova flag para manter texto em português
       };
       
       // Adicionar parâmetros para texto na imagem se necessário
@@ -229,6 +232,9 @@ export default function DesignerInterface({ onImageGenerated, user, agenteConfig
                   value={textOverlay}
                   onChange={(e) => setTextOverlay(e.target.value)}
                 />
+                <p className="text-xs text-gray-500 italic">
+                  O texto será incluído exatamente como digitado, em português.
+                </p>
               </div>
               
               <div className="space-y-2">

@@ -636,7 +636,7 @@ export const generateImage = async (req, res) => {
     console.log('Iniciando geração de imagem...');
     
     // Obter parâmetros da requisição
-    let { prompt, size, agente_id, use_documents, text_overlay, text_position } = req.body;
+    let { prompt, size, agente_id, use_documents, text_overlay, text_position, language, preserve_text, keep_portuguese } = req.body;
     
     // Log dos parâmetros recebidos
     console.log('Parâmetros recebidos:');
@@ -646,11 +646,24 @@ export const generateImage = async (req, res) => {
     console.log('- use_documents:', use_documents);
     console.log('- text_overlay:', text_overlay);
     console.log('- text_position:', text_position);
+    console.log('- language:', language);
+    console.log('- preserve_text:', preserve_text);
+    console.log('- keep_portuguese:', keep_portuguese);
     
     // Se os dados vieram via FormData, eles estarão em campos de string
     if (typeof use_documents === 'string') {
       use_documents = use_documents === 'true';
       console.log('use_documents convertido para boolean:', use_documents);
+    }
+    
+    if (typeof preserve_text === 'string') {
+      preserve_text = preserve_text === 'true';
+      console.log('preserve_text convertido para boolean:', preserve_text);
+    }
+    
+    if (typeof keep_portuguese === 'string') {
+      keep_portuguese = keep_portuguese === 'true';
+      console.log('keep_portuguese convertido para boolean:', keep_portuguese);
     }
     
     // Validar prompt
@@ -815,7 +828,8 @@ export const generateImage = async (req, res) => {
       messages: [
         {
           role: "system",
-          content: "Você é um assistente especializado em design para marcas de roupa. Crie imagens de alta qualidade e relevantes para o setor de moda."
+          content: "Você é um assistente especializado em design para marcas de roupa. Crie imagens de alta qualidade e relevantes para o setor de moda." + 
+            (keep_portuguese ? " IMPORTANTE: Mantenha qualquer texto solicitado em português brasileiro. Não traduza nenhum texto para inglês ou outro idioma." : "")
         },
         {
           role: "user",

@@ -188,20 +188,18 @@ export default function Chat() {
     setCarregando(true);
 
     try {
-      // Verificar se o agente tem documentos ou prompt personalizado
+      // Verificar se o agente tem documentos ou prompt no arquivo de configuração
       const temDocumentos = agenteConfigData?.documentos_treinamento?.length > 0;
-      const temPromptPersonalizado = agenteConfigData?.prompt_base && agenteConfigData.prompt_base.trim() !== '';
       
       console.log("Agente:", conversa.agente_id);
       console.log("Tem documentos:", temDocumentos, agenteConfigData?.documentos_treinamento);
-      console.log("Tem prompt personalizado:", temPromptPersonalizado, agenteConfigData?.prompt_base);
       
       // Usar o prompt definido no arquivo de configuração centralizado
       const promptDoArquivoConfig = agentesConfig[conversa.agente_id]?.prompt;
       console.log("Prompt do arquivo de configuração:", promptDoArquivoConfig);
       
-      // Se não há documentos nem prompt personalizado, e não há prompt no arquivo de configuração, não pode responder
-      if (!temDocumentos && !temPromptPersonalizado && !promptDoArquivoConfig) {
+      // Se não há documentos e não há prompt no arquivo de configuração, não pode responder
+      if (!temDocumentos && !promptDoArquivoConfig) {
         const mensagemErro = {
           tipo: "agente",
           conteudo: `Desculpe, este agente ainda não foi treinado. Para que eu possa ajudar você adequadamente, um administrador precisa:
@@ -225,8 +223,8 @@ ${user?.role === 'admin' ? `Como você é um administrador, pode [sincronizar os
         `${m.tipo === 'usuario' ? 'Usuário' : 'Assistente'}: ${m.conteudo}`
       ).join('\n');
 
-      // Usar o prompt do banco de dados ou o prompt do arquivo de configuração
-      const promptEspecifico = agenteConfigData?.prompt_base || promptDoArquivoConfig || '';
+      // Usar apenas o prompt do arquivo de configuração
+      const promptEspecifico = promptDoArquivoConfig || '';
       
       const prompt = `${promptEspecifico}
 

@@ -98,11 +98,28 @@ export const AgenteConfig = {
     }
   },
   
-  update: async (id, agenteData) => {
+  update: async (codigo, agenteData) => {
     try {
-      const response = await api.put(`/agente-config/${id}`, agenteData);
+      console.log('Atualizando agente com código:', codigo);
+      console.log('Dados enviados para atualização:', JSON.stringify(agenteData));
+      
+      // Garantir que estamos enviando apenas os campos necessários
+      const dadosParaEnviar = {
+        ...agenteData,
+        codigo: codigo // Garantir que o código está correto
+      };
+      
+      // Remover campos que podem causar problemas
+      delete dadosParaEnviar._id;
+      delete dadosParaEnviar.id;
+      delete dadosParaEnviar.__v;
+      
+      // Usar o código como identificador (não o id)
+      const response = await api.put(`/agente-config/${codigo}`, dadosParaEnviar);
+      console.log('Resposta da atualização do agente:', response.data);
       return response.data;
     } catch (error) {
+      console.error('Erro ao atualizar agente:', error.response?.data || error);
       throw error.response?.data || { message: 'Erro ao atualizar configuração de agente' };
     }
   },

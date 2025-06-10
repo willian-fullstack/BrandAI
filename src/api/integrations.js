@@ -95,6 +95,15 @@ export const GenerateImageService = async (params) => {
         formData.append('text_position', params.text_position || 'bottom');
       }
       
+      // Adicionar parâmetros de idioma
+      if (params.language) {
+        formData.append('language', params.language);
+      }
+      
+      if (params.preserve_text !== undefined) {
+        formData.append('preserve_text', params.preserve_text.toString());
+      }
+      
       console.log('Enviando formData com imagem de referência');
       
       const response = await api.post('/integrations/generate-image', formData, {

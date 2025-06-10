@@ -55,10 +55,6 @@ const agenteConfigSchema = mongoose.Schema(
       type: String,
       required: true,
     },
-    prompt_base: {
-      type: String,
-      default: '',
-    },
     exemplos_uso: {
       type: [String],
       default: [],
