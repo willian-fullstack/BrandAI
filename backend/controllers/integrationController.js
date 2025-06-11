@@ -6,6 +6,9 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import apiKeyManager from '../utils/apiKeyManager.js';
+import apiUsageTracker from '../utils/apiUsageTracker.js';
+import axios from 'axios';
 
 // Configurar dotenv
 dotenv.config();
@@ -282,6 +285,12 @@ export const uploadTrainingDocument = async (req, res) => {
   try {
     // Verificar se o agente existe
     const agenteId = req.params.agenteId;
+    
+    // Sanitizar o ID do agente para evitar path traversal
+    if (!/^[a-zA-Z0-9_-]+$/.test(agenteId)) {
+      return res.status(400).json({ message: 'ID de agente inválido' });
+    }
+    
     const AgenteConfig = mongoose.model('AgenteConfig');
     const agente = await AgenteConfig.findOne({ codigo: agenteId });
     
@@ -295,6 +304,33 @@ export const uploadTrainingDocument = async (req, res) => {
     }
 
     const file = req.files.document;
+    
+    // Verificar tipo de arquivo permitido para documentos de treinamento
+    const allowedMimeTypes = [
+      'text/plain', 'text/markdown', 'text/csv', 
+      'application/json', 'text/xml', 'text/html',
+      'application/pdf', 'application/msword', 
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      return res.status(400).json({ 
+        message: 'Tipo de arquivo não permitido para documentos de treinamento', 
+        allowed_types: allowedMimeTypes 
+      });
+    }
+    
+    // Verificar tamanho máximo (20MB)
+    const maxSize = 20 * 1024 * 1024; // 20MB
+    if (file.size > maxSize) {
+      return res.status(400).json({
+        message: 'Arquivo muito grande. O tamanho máximo permitido é 20MB'
+      });
+    }
+    
+    // Sanitizar nome do arquivo
+    const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    
     const uploadPath = path.join(__dirname, '..', 'uploads', 'training', agenteId);
     
     // Criar diretório se não existir
@@ -303,7 +339,7 @@ export const uploadTrainingDocument = async (req, res) => {
     }
     
     // Gerar nome de arquivo único
-    const fileName = `${Date.now()}-${file.name}`;
+    const fileName = `${Date.now()}-${sanitizedName}`;
     const filePath = path.join(uploadPath, fileName);
     
     // Mover o arquivo para o diretório de uploads
@@ -311,7 +347,7 @@ export const uploadTrainingDocument = async (req, res) => {
     
     // Adicionar documento ao agente
     const novoDocumento = {
-      nome: file.name,
+      nome: sanitizedName,
       caminho: `/uploads/training/${agenteId}/${fileName}`,
       tipo: file.mimetype,
       tamanho: file.size,
@@ -350,6 +386,26 @@ export const uploadFile = async (req, res) => {
     }
 
     const file = req.files.file;
+    
+    // Verificar tipo de arquivo permitido
+    const allowedMimeTypes = [
+      'text/plain', 'text/markdown', 'text/csv', 
+      'application/json', 'text/xml', 'text/html',
+      'application/pdf', 'application/msword', 
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg', 'image/png', 'image/gif'
+    ];
+    
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      return res.status(400).json({ 
+        message: 'Tipo de arquivo não permitido', 
+        allowed_types: allowedMimeTypes 
+      });
+    }
+    
+    // Sanitizar nome do arquivo
+    const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    
     const uploadPath = path.join(__dirname, '..', 'uploads', 'files');
     
     // Criar diretório se não existir
@@ -358,8 +414,16 @@ export const uploadFile = async (req, res) => {
     }
     
     // Gerar nome de arquivo único
-    const fileName = `${Date.now()}-${file.name}`;
+    const fileName = `${Date.now()}-${sanitizedName}`;
     const filePath = path.join(uploadPath, fileName);
+    
+    // Verificar tamanho máximo (10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      return res.status(400).json({
+        message: 'Arquivo muito grande. O tamanho máximo permitido é 10MB'
+      });
+    }
     
     // Mover o arquivo para o diretório de uploads
     await file.mv(filePath);
@@ -370,7 +434,7 @@ export const uploadFile = async (req, res) => {
     res.status(200).json({
       success: true,
       file_url: fileUrl,
-      file_name: file.name,
+      file_name: sanitizedName,
       file_type: file.mimetype,
       file_size: file.size
     });
@@ -387,6 +451,17 @@ export const uploadFile = async (req, res) => {
 // @route   POST /api/integrations/invoke-llm
 // @access  Privado
 export const invokeLLM = async (req, res) => {
+  const startTime = Date.now();
+  let usageData = {
+    api_name: 'openai',
+    endpoint: '/v1/chat/completions',
+    user_id: req.user ? req.user._id : null,
+    success: false,
+    tokens_input: 0,
+    tokens_output: 0,
+    response_time_ms: 0
+  };
+
   try {
     const { prompt, file_urls, agente_id } = req.body;
 
@@ -518,14 +593,6 @@ export const invokeLLM = async (req, res) => {
     // Fazer chamada para a API da OpenAI
     const axios = await import('axios');
     
-    // Obter a chave da API do ambiente
-    const apiKey = process.env.OPENAI_API_KEY;
-    
-    if (!apiKey) {
-      console.error('OPENAI_API_KEY não encontrada no ambiente');
-      return res.status(500).json({ message: 'Configuração da API OpenAI não encontrada' });
-    }
-    
     // Preparar mensagens para a API da OpenAI
     const messages = [
       { 
@@ -545,6 +612,18 @@ export const invokeLLM = async (req, res) => {
     // Adicionar a mensagem do usuário
     messages.push({ role: 'user', content: prompt });
     
+    // Estimar tokens de entrada
+    const inputText = messages.map(m => m.content).join(' ');
+    usageData.tokens_input = apiUsageTracker.estimateTokens(inputText);
+    
+    // Obter a chave da API usando o gerenciador
+    const apiKey = await apiKeyManager.getApiKey('OPENAI_API_KEY');
+    
+    if (!apiKey) {
+      console.error('OPENAI_API_KEY não encontrada no ambiente');
+      return res.status(500).json({ message: 'Configuração da API OpenAI não encontrada' });
+    }
+    
     const response = await axios.default.post(
       'https://api.openai.com/v1/chat/completions',
       {
@@ -563,47 +642,74 @@ export const invokeLLM = async (req, res) => {
     
     // Extrair a resposta do modelo
     const resposta = response.data.choices[0].message.content;
+    
+    // Atualizar dados de uso
+    usageData.success = true;
+    usageData.tokens_output = apiUsageTracker.estimateTokens(resposta);
+    usageData.cost = apiUsageTracker.calculateOpenAICost(
+      'gpt-4o', 
+      usageData.tokens_input, 
+      usageData.tokens_output
+    );
 
     // Retornar a resposta
     res.json(resposta);
     
   } catch (error) {
     console.error('Erro ao invocar modelo de linguagem:', error.response?.data || error.message);
+    usageData.success = false;
+    usageData.error_message = error.message;
     res.status(500).json({ message: 'Erro ao processar solicitação de IA' });
+  } finally {
+    // Registrar uso da API
+    usageData.response_time_ms = Date.now() - startTime;
+    await apiUsageTracker.trackApiUsage(usageData);
   }
 };
 
-// Utilitário para encontrar e ler arquivos
+// Utilitário para encontrar e ler arquivos de forma segura
 const findAndReadFile = (filePath) => {
   try {
+    // Normalizar o caminho para evitar ataques de traversal
+    const normalizedPath = path.normalize(filePath).replace(/^(\.\.(\/|\\|$))+/, '');
+    
+    // Lista de diretórios permitidos (whitelist)
+    const allowedDirs = [
+      path.join(__dirname, '..', 'uploads'),
+      path.join(__dirname, '..', 'uploads', 'training')
+    ];
+    
     // Verificar se o caminho é absoluto
-    if (path.isAbsolute(filePath)) {
-      if (fs.existsSync(filePath)) {
-        const content = fs.readFileSync(filePath, 'utf8');
-        return { found: true, content, path: filePath };
+    if (path.isAbsolute(normalizedPath)) {
+      // Verificar se o caminho absoluto está dentro dos diretórios permitidos
+      const isPathAllowed = allowedDirs.some(dir => normalizedPath.startsWith(dir));
+      
+      if (isPathAllowed && fs.existsSync(normalizedPath)) {
+        const content = fs.readFileSync(normalizedPath, 'utf8');
+        return { found: true, content, path: normalizedPath };
       }
     }
     
-    // Lista de diretórios possíveis para procurar o arquivo
-    const baseDirs = [
-      path.join(__dirname, '..', 'uploads'),
-      path.join(__dirname, '..', 'uploads', 'training'),
-      path.join(__dirname, '..'),
-      path.join(__dirname, '..', '..'),
-    ];
-    
     // Nome do arquivo
-    const fileName = path.basename(filePath);
+    const fileName = path.basename(normalizedPath);
     
-    // Para cada diretório, verificar se o arquivo existe
-    for (const dir of baseDirs) {
+    // Verificar extensões permitidas
+    const allowedExtensions = ['.txt', '.md', '.csv', '.json', '.xml', '.html', '.htm', '.pdf', '.doc', '.docx'];
+    const fileExt = path.extname(fileName).toLowerCase();
+    
+    if (!allowedExtensions.includes(fileExt)) {
+      return { found: false, error: 'Tipo de arquivo não permitido' };
+    }
+    
+    // Para cada diretório permitido, verificar se o arquivo existe
+    for (const dir of allowedDirs) {
       const fullPath = path.join(dir, fileName);
       if (fs.existsSync(fullPath)) {
         const content = fs.readFileSync(fullPath, 'utf8');
         return { found: true, content, path: fullPath };
       }
       
-      // Verificar recursivamente em subdiretórios (limitado a 1 nível para evitar buscas muito profundas)
+      // Verificar em subdiretórios específicos (não recursivo)
       try {
         const subdirs = fs.readdirSync(dir, { withFileTypes: true })
           .filter(dirent => dirent.isDirectory())
@@ -616,7 +722,7 @@ const findAndReadFile = (filePath) => {
             return { found: true, content, path: subPath };
           }
         }
-      } catch (err) {
+      } catch (_) {
         // Ignorar erros de acesso a diretórios
       }
     }
@@ -632,6 +738,16 @@ const findAndReadFile = (filePath) => {
 // @route   POST /api/integrations/generate-image
 // @access  Privado
 export const generateImage = async (req, res) => {
+  const startTime = Date.now();
+  let usageData = {
+    api_name: 'dall-e',
+    endpoint: '/v1/images/generations',
+    user_id: req.user ? req.user._id : null,
+    success: false,
+    response_time_ms: 0,
+    metadata: { size: req.body.size || '1024x1024' }
+  };
+
   try {
     console.log('Iniciando geração de imagem...');
     
@@ -796,14 +912,6 @@ export const generateImage = async (req, res) => {
     // Fazer chamada para a API da OpenAI
     const axios = await import('axios');
     
-    // Obter a chave da API do ambiente
-    const apiKey = process.env.OPENAI_API_KEY;
-    
-    if (!apiKey) {
-      console.error('OPENAI_API_KEY não encontrada no ambiente');
-      return res.status(500).json({ message: 'Configuração da API OpenAI não encontrada' });
-    }
-    
     // Construir prompt completo com informações dos documentos, se disponíveis
     let promptCompleto = prompt;
     
@@ -857,6 +965,9 @@ export const generateImage = async (req, res) => {
     
     try {
       console.log('Fazendo chamada para GPT-4o para processar o prompt');
+      // Obter a chave da API da variável de ambiente
+      const apiKey = process.env.OPENAI_API_KEY;
+      
       // Primeiro, vamos fazer a chamada para o chat completion para processar o prompt e imagem
       const chatResponse = await axios.default.post(
         'https://api.openai.com/v1/chat/completions',
@@ -873,7 +984,25 @@ export const generateImage = async (req, res) => {
       const processedPrompt = chatResponse.data.choices[0].message.content;
       console.log('Prompt processado pelo GPT-4o:', processedPrompt);
       
+      // Registrar uso da API GPT-4
+      await apiUsageTracker.trackApiUsage({
+        api_name: 'openai',
+        endpoint: '/v1/chat/completions',
+        user_id: req.user ? req.user._id : null,
+        success: true,
+        tokens_input: apiUsageTracker.estimateTokens(promptCompleto),
+        tokens_output: apiUsageTracker.estimateTokens(processedPrompt),
+        cost: apiUsageTracker.calculateOpenAICost(
+          'gpt-4o', 
+          apiUsageTracker.estimateTokens(promptCompleto), 
+          apiUsageTracker.estimateTokens(processedPrompt)
+        ),
+        response_time_ms: Date.now() - startTime,
+        metadata: { purpose: 'dall-e-prompt-processing' }
+      });
+      
       console.log('Fazendo chamada para DALL-E 3 para gerar a imagem');
+      
       // Agora, fazer a chamada para gerar a imagem usando DALL-E 3
       const imageResponse = await axios.default.post(
         'https://api.openai.com/v1/images/generations',
@@ -895,6 +1024,11 @@ export const generateImage = async (req, res) => {
       // Extrair URL da imagem gerada
       const imageUrl = imageResponse.data.data[0].url;
       console.log('Imagem gerada com sucesso. URL recebida.');
+      
+      // Atualizar dados de uso
+      usageData.success = true;
+      usageData.cost = apiUsageTracker.calculateOpenAICost('dall-e-3', 0, 0);
+      usageData.metadata.image_size = size;
       
       // Salvar no banco de dados
       try {
@@ -926,6 +1060,8 @@ export const generateImage = async (req, res) => {
       
     } catch (error) {
       console.error('Erro ao gerar imagem com OpenAI:', error.response?.data || error.message);
+      usageData.success = false;
+      usageData.error_message = error.message;
       return res.status(500).json({ 
         message: 'Erro ao gerar imagem', 
         error: error.response?.data || error.message 
@@ -934,7 +1070,13 @@ export const generateImage = async (req, res) => {
     
   } catch (error) {
     console.error('Erro ao processar solicitação de geração de imagem:', error);
+    usageData.success = false;
+    usageData.error_message = error.message;
     res.status(500).json({ message: 'Erro ao processar solicitação de geração de imagem', error: error.message });
+  } finally {
+    // Registrar uso da API
+    usageData.response_time_ms = Date.now() - startTime;
+    await apiUsageTracker.trackApiUsage(usageData);
   }
 };
 
@@ -975,5 +1117,64 @@ export const getGeneratedImages = async (req, res) => {
   } catch (error) {
     console.error('Erro ao obter imagens geradas:', error);
     res.status(500).json({ message: 'Erro ao obter imagens geradas' });
+  }
+};
+
+// @desc    Obter estatísticas de uso de API
+// @route   GET /api/integrations/api-usage-stats
+// @access  Admin
+export const getApiUsageStats = async (req, res) => {
+  try {
+    // Obter parâmetros da requisição
+    const startDate = req.query.startDate ? new Date(req.query.startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 dias atrás por padrão
+    const endDate = req.query.endDate ? new Date(req.query.endDate) : new Date();
+    const apiName = req.query.api_name; // Opcional, filtrar por nome da API
+    
+    // Configurar filtros
+    const filterOptions = {};
+    if (apiName) {
+      filterOptions.api_name = apiName;
+    }
+    
+    // Obter estatísticas
+    const stats = await apiUsageTracker.getApiUsageStats(startDate, endDate, filterOptions);
+    
+    res.json({
+      success: true,
+      timeRange: {
+        startDate,
+        endDate
+      },
+      stats
+    });
+  } catch (error) {
+    console.error('Erro ao obter estatísticas de uso de API:', error);
+    res.status(500).json({ message: 'Erro ao obter estatísticas de uso de API' });
+  }
+};
+
+// @desc    Obter uso de API por usuário
+// @route   GET /api/integrations/api-usage-by-user
+// @access  Admin
+export const getUserApiUsage = async (req, res) => {
+  try {
+    // Obter parâmetros da requisição
+    const startDate = req.query.startDate ? new Date(req.query.startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 dias atrás por padrão
+    const endDate = req.query.endDate ? new Date(req.query.endDate) : new Date();
+    
+    // Obter estatísticas por usuário
+    const userStats = await apiUsageTracker.getUserApiUsage(startDate, endDate);
+    
+    res.json({
+      success: true,
+      timeRange: {
+        startDate,
+        endDate
+      },
+      userStats
+    });
+  } catch (error) {
+    console.error('Erro ao obter uso de API por usuário:', error);
+    res.status(500).json({ message: 'Erro ao obter uso de API por usuário' });
   }
 }; 

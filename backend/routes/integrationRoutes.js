@@ -11,7 +11,9 @@ import {
   uploadFile,
   invokeLLM,
   generateImage,
-  getGeneratedImages
+  getGeneratedImages,
+  getApiUsageStats,
+  getUserApiUsage
 } from '../controllers/integrationController.js';
 import { protect, admin } from '../middleware/authMiddleware.js';
 
@@ -46,5 +48,11 @@ router.get('/generated-images', getGeneratedImages);
 
 // Rotas para administradores
 router.get('/', admin, getIntegrations);
+
+// Rota para obter estatísticas de uso de API
+router.get('/api-usage-stats', protect, admin, getApiUsageStats);
+
+// Rota para obter uso de API por usuário
+router.get('/api-usage-by-user', protect, admin, getUserApiUsage);
 
 export default router; 

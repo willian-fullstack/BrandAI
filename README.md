@@ -11,6 +11,17 @@ BrandAI é uma plataforma de inteligência artificial especializada para marcas 
 
 ## Correções Recentes
 
+### Revisão de Segurança e Otimização do Código
+
+Realizamos uma revisão completa do código para identificar e corrigir vulnerabilidades de segurança, remover arquivos duplicados e melhorar a estrutura do projeto. Para mais detalhes, consulte o arquivo [REVISAO_SEGURANCA.md](./REVISAO_SEGURANCA.md).
+
+Principais melhorias:
+- Remoção de arquivos duplicados e temporários
+- Correção de vulnerabilidades de path traversal
+- Implementação de validação segura para upload de arquivos
+- Melhoria no gerenciamento de chaves de API
+- Sanitização de entradas do usuário
+
 ### Correção do Problema de Reconhecimento de Documentos Anexados
 
 Corrigimos um problema crítico onde os documentos anexados não estavam sendo reconhecidos pelo sistema. As seguintes alterações foram implementadas:
@@ -61,8 +72,10 @@ Corrigimos um problema crítico onde os documentos anexados não estavam sendo r
    ```
 
 3. Configure as variáveis de ambiente:
-   - Copie `.env.example` para `.env` no diretório backend
+   - Copie `.env.example` para `.env` no diretório raiz para o frontend
+   - Copie `backend/.env.example` para `backend/.env` para o backend
    - Preencha as variáveis necessárias (MongoDB URI, chaves de API, etc.)
+   - **IMPORTANTE**: Nunca compartilhe ou cometa arquivos .env com chaves de API ou senhas
 
 4. Inicie o servidor de desenvolvimento:
    ```
@@ -73,6 +86,31 @@ Corrigimos um problema crítico onde os documentos anexados não estavam sendo r
    # Terminal 2 - Frontend
    npm run dev
    ```
+
+## Segurança e Variáveis de Ambiente
+
+### Estrutura de Arquivos .env
+
+O projeto utiliza dois arquivos .env separados:
+
+1. **Frontend (.env na raiz)**: 
+   - Contém apenas variáveis necessárias para o frontend
+   - Prefixadas com VITE_
+   - Não deve conter chaves de API sensíveis
+   - Exemplo: `VITE_API_URL=http://localhost:5000/api`
+
+2. **Backend (backend/.env)**:
+   - Contém variáveis para o backend, incluindo chaves de API e segredos
+   - Não são expostas ao frontend
+   - Exemplo: `OPENAI_API_KEY=sua_chave_aqui`
+
+### Boas Práticas de Segurança
+
+- Nunca exponha chaves de API diretamente no frontend
+- Todas as chamadas para APIs externas devem passar pelo backend
+- Não armazene senhas em texto puro nos arquivos .env
+- Use o script `createAdmin.js` para criar administradores
+- Mantenha os arquivos .env no .gitignore
 
 ## Licença
 
