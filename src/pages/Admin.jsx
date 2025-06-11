@@ -682,12 +682,12 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
           <TabsContent value="dashboard" className="space-y-6">
              {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+              <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-gray-600 text-sm">Total Usuários</p>
-                      <p className="text-3xl font-bold text-gray-900">{totalUsuarios}</p>
+                      <p className="text-muted-foreground text-sm">Total Usuários</p>
+                      <p className="text-3xl font-bold">{totalUsuarios}</p>
                     </div>
                     <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center">
                       <Users className="w-6 h-6 text-white" />
@@ -696,11 +696,11 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
                 </CardContent>
               </Card>
 
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+              <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-gray-600 text-sm">Receita Total Estimada</p>
+                      <p className="text-muted-foreground text-sm">Receita Total Estimada</p>
                       <p className="text-3xl font-bold text-green-600">R$ {totalReceita.toFixed(2)}</p>
                     </div>
                     <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
@@ -710,12 +710,12 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
                 </CardContent>
               </Card>
 
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+              <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-gray-600 text-sm">Conversas Totais</p>
-                      <p className="text-3xl font-bold text-gray-900">{conversas.length}</p>
+                      <p className="text-muted-foreground text-sm">Conversas Totais</p>
+                      <p className="text-3xl font-bold">{conversas.length}</p>
                     </div>
                     <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center">
                       <MessageSquare className="w-6 h-6 text-white" />
@@ -724,11 +724,11 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
                 </CardContent>
               </Card>
 
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+              <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-gray-600 text-sm">Afiliados Ativos</p>
+                      <p className="text-muted-foreground text-sm">Afiliados Ativos</p>
                       <p className="text-3xl font-bold text-yellow-600">{afiliados}</p>
                     </div>
                     <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl flex items-center justify-center">
@@ -740,26 +740,26 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
             </div>
 
             {/* Distribuição de Planos */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-3">
-                  <BarChart className="w-6 h-6 text-indigo-600" />
+                  <BarChart className="w-6 h-6 text-primary" />
                   Distribuição de Planos
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-3 gap-6">
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <div className="text-center p-4 bg-card border border-blue-200 dark:border-blue-900 rounded-lg">
                     <div className="text-2xl font-bold text-blue-600">{usuariosBasico}</div>
-                    <div className="text-sm text-gray-600">Plano Básico</div>
+                    <div className="text-sm text-muted-foreground">Plano Básico</div>
                   </div>
-                  <div className="text-center p-4 bg-purple-50 rounded-lg">
+                  <div className="text-center p-4 bg-card border border-purple-200 dark:border-purple-900 rounded-lg">
                     <div className="text-2xl font-bold text-purple-600">{usuariosIntermediario}</div>
-                    <div className="text-sm text-gray-600">Plano Intermediário</div>
+                    <div className="text-sm text-muted-foreground">Plano Intermediário</div>
                   </div>
-                  <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                  <div className="text-center p-4 bg-card border border-yellow-200 dark:border-yellow-900 rounded-lg">
                     <div className="text-2xl font-bold text-yellow-600">{usuariosPremium}</div>
-                    <div className="text-sm text-gray-600">Plano Premium</div>
+                    <div className="text-sm text-muted-foreground">Plano Premium</div>
                   </div>
                 </div>
               </CardContent>
@@ -791,11 +791,11 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
             </div>
 
             {sincronizacaoInfo.agentesExcedentes > 0 && (
-              <Card className="bg-amber-50 border-amber-200">
+              <Card className="border-amber-200 dark:border-amber-900 bg-amber-50/30 dark:bg-amber-900/20">
                 <CardContent className="p-4">
                   <div className="flex items-center">
-                    <AlertCircle className="w-5 h-5 text-amber-600 mr-2" />
-                    <p className="text-amber-800">
+                    <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-500 mr-2" />
+                    <p className="text-amber-800 dark:text-amber-300">
                       Foram detectados {sincronizacaoInfo.agentesExcedentes} agentes no banco de dados que não estão definidos no frontend. 
                       Clique em "Sincronizar Agentes" para remover estes agentes extras e resolver o problema.
                     </p>
@@ -806,11 +806,11 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
               {!agentesConfigs || !Array.isArray(agentesConfigs) || agentesConfigs.length === 0 ? (
-                <div className="col-span-3 p-8 text-center bg-gray-50 rounded-lg">
+                <div className="col-span-3 p-8 text-center bg-card rounded-lg">
                   <div className="flex flex-col items-center justify-center gap-4">
-                    <Bot className="w-12 h-12 text-gray-400" />
-                    <h3 className="text-xl font-medium text-gray-600">Nenhum agente configurado</h3>
-                    <p className="text-gray-500 max-w-md mx-auto">
+                    <Bot className="w-12 h-12 text-muted-foreground" />
+                    <h3 className="text-xl font-medium">Nenhum agente configurado</h3>
+                    <p className="text-muted-foreground max-w-md mx-auto">
                       Parece que ainda não há agentes configurados no sistema. Clique no botão "Inicializar/Verificar Agentes Base" acima para configurar os agentes padrão.
                     </p>
                     <Button 
@@ -840,15 +840,15 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-4">
-                      <div className="text-sm text-gray-600 mb-4">{config.descricao}</div>
+                      <div className="text-sm text-muted-foreground mb-4">{config.descricao}</div>
                       
                       <div className="grid grid-cols-2 gap-2 mb-4">
-                        <div className="bg-gray-50 p-2 rounded">
-                          <p className="text-xs text-gray-500">Modelo</p>
+                        <div className="bg-card p-2 rounded border">
+                          <p className="text-xs text-muted-foreground">Modelo</p>
                           <p className="font-semibold">{config.modelo_ia}</p>
                         </div>
-                        <div className="bg-gray-50 p-2 rounded">
-                          <p className="text-xs text-gray-500">Documentos</p>
+                        <div className="bg-card p-2 rounded border">
+                          <p className="text-xs text-muted-foreground">Documentos</p>
                           <p className="font-semibold">{config?.documentos_treinamento?.length || 0} arquivos</p>
                         </div>
                       </div>
@@ -859,11 +859,11 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
                           <h4 className="text-sm font-medium mb-2">Documentos de treinamento:</h4>
                           <div className="space-y-2">
                             {config.documentos_treinamento.map((doc) => (
-                              <div key={doc._id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                              <div key={doc._id} className="flex items-center justify-between bg-card p-2 rounded border">
                                 <div className="flex items-center">
-                                  <FileText className="h-4 w-4 mr-2 text-gray-600" />
+                                  <FileText className="h-4 w-4 mr-2" />
                                   <span className="text-sm">{doc.nome}</span>
-                                  <span className="ml-2 text-xs text-gray-500">
+                                  <span className="ml-2 text-xs text-muted-foreground">
                                     ({(doc.tamanho / 1024).toFixed(2)} KB)
                                   </span>
                                 </div>
@@ -896,11 +896,11 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
                         />
                         <label
                           htmlFor={`file-upload-${config._id}`}
-                          className="flex items-center justify-center w-full p-2 border-2 border-dashed border-gray-300 rounded-md cursor-pointer hover:bg-gray-50"
+                          className="flex items-center justify-center w-full p-2 border-2 border-dashed border-muted rounded-md cursor-pointer hover:bg-muted/50"
                         >
                           <div className="flex items-center space-x-2">
-                            <Upload className="h-5 w-5 text-gray-400" />
-                            <span className="text-sm text-gray-500">
+                            <Upload className="h-5 w-5 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">
                               {uploadingFile ? 'Enviando...' : 'Adicionar documento de treinamento'}
                             </span>
                           </div>
@@ -948,9 +948,9 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
                       
                       <div>
                         <label className="block text-sm font-medium mb-1">Documentos de Treinamento:</label>
-                        <div className="border rounded-lg p-4 space-y-3 bg-slate-50">
+                        <div className="border rounded-lg p-4 space-y-3 bg-card">
                           <div className="flex items-center gap-2">
-                            <Upload className="w-5 h-5 text-indigo-600"/>
+                            <Upload className="w-5 h-5 text-primary"/>
                             <input
                               type="file"
                               multiple
@@ -962,22 +962,22 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
                                 })
                                 e.target.value = null; // Reset input
                               }}
-                              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer"
+                              className="block w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer"
                               disabled={uploadingFile}
                             />
                           </div>
-                          {uploadingFile && <p className="text-sm text-indigo-600">Enviando arquivo(s)...</p>}
+                          {uploadingFile && <p className="text-sm text-primary">Enviando arquivo(s)...</p>}
 
                           {editandoAgente.documentos_treinamento?.length > 0 && (
                             <div className="mt-4">
                               <h4 className="font-medium text-sm">Documentos de treinamento:</h4>
                               <div className="space-y-2 mt-2">
                                 {editandoAgente.documentos_treinamento.map((doc, index) => (
-                                  <div key={doc._id || index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                                  <div key={doc._id || index} className="flex items-center justify-between bg-card p-2 rounded border">
                                     <div className="flex items-center">
-                                      <FileText className="h-4 w-4 mr-2 text-gray-600" />
+                                      <FileText className="h-4 w-4 mr-2" />
                                       <span className="text-sm">{doc.nome}</span>
-                                      <span className="ml-2 text-xs text-gray-500">
+                                      <span className="ml-2 text-xs text-muted-foreground">
                                         ({(doc.tamanho / 1024).toFixed(2)} KB)
                                       </span>
                                     </div>
@@ -1031,51 +1031,55 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
 
           {/* Usuários Content */}
           <TabsContent value="usuarios">
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+            <Card>
               <CardHeader>
                 <CardTitle>Usuários Cadastrados</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="w-full border-collapse">
                     <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-3">Nome</th>
-                        <th className="text-left p-3">Email</th>
-                        <th className="text-left p-3">Plano</th>
-                        <th className="text-left p-3">Créditos</th>
-                        <th className="text-left p-3">Afiliado</th>
-                        <th className="text-left p-3">Cadastro</th>
+                      <tr className="bg-muted/50">
+                        <th className="p-3 text-left">Nome</th>
+                        <th className="p-3 text-left">Email</th>
+                        <th className="p-3 text-left">Plano</th>
+                        <th className="p-3 text-left">Créditos</th>
+                        <th className="p-3 text-left">Status</th>
+                        <th className="p-3 text-left">Ações</th>
                       </tr>
                     </thead>
                     <tbody>
                       {Array.isArray(usuarios) && usuarios.map((usuario) => (
-                        <tr key={usuario.id} className="border-b hover:bg-gray-50">
+                        <tr key={usuario.id} className="border-b hover:bg-muted/30">
                           <td className="p-3">{usuario.full_name}</td>
                           <td className="p-3">{usuario.email}</td>
                           <td className="p-3">
-                            <Badge className={
-                              usuario.plano_atual === 'premium' ? 'bg-yellow-100 text-yellow-800' :
-                              usuario.plano_atual === 'intermediario' ? 'bg-purple-100 text-purple-800' :
-                              'bg-blue-100 text-blue-800'
+                            <Badge variant={
+                              usuario.plano_atual === 'premium' ? 'yellow' : 
+                              usuario.plano_atual === 'intermediario' ? 'purple' : 
+                              'blue'
                             }>
-                              {usuario.plano_atual?.charAt(0).toUpperCase() + usuario.plano_atual?.slice(1)}
+                              {usuario.plano_atual === 'premium' ? 'Premium' : 
+                               usuario.plano_atual === 'intermediario' ? 'Intermediário' : 
+                               'Básico'}
                             </Badge>
                           </td>
-                          <td className="p-3">{usuario.creditos_restantes || 0}</td>
+                          <td className="p-3">{usuario.creditos_restantes}</td>
                           <td className="p-3">
-                            {usuario.eh_afiliado ? (
-                              <Badge className="bg-green-100 text-green-800">Sim</Badge>
-                            ) : (
-                              <Badge variant="outline">Não</Badge>
-                            )}
+                            <Badge variant={usuario.status === 'ativo' ? 'success' : 'destructive'}>
+                              {usuario.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                            </Badge>
                           </td>
-                          <td className="p-3">{new Date(usuario.created_date).toLocaleDateString('pt-BR')}</td>
+                          <td className="p-3">
+                            <Button variant="ghost" size="sm">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </td>
                         </tr>
                       ))}
                       {(!Array.isArray(usuarios) || usuarios.length === 0) && (
                         <tr>
-                          <td colSpan="6" className="p-3 text-center text-gray-500">Nenhum usuário encontrado</td>
+                          <td colSpan="6" className="p-3 text-center text-muted-foreground">Nenhum usuário encontrado</td>
                         </tr>
                       )}
                     </tbody>
@@ -1087,142 +1091,122 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
 
           {/* Financeiro Content */}
           <TabsContent value="financeiro">
-            <div className="grid lg:grid-cols-2 gap-6">
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
-                <CardHeader>
-                  <CardTitle>Resumo Financeiro</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between">
-                      <span>Receita Total Estimada:</span>
-                      <span className="font-bold text-green-600">R$ {totalReceita.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Total Comissoes:</span>
-                      <span className="font-bold text-orange-600">R$ {totalComissoes.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Lucro Líquido Estimado:</span>
-                      <span className="font-bold text-blue-600">R$ {(totalReceita - totalComissoes).toFixed(2)}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
-                <CardHeader>
-                  <CardTitle>Indicações Recentes</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {Array.isArray(indicacoes) && indicacoes.slice(0, 5).map((indicacao) => (
-                    <div key={indicacao.id} className="flex justify-between items-center py-2 border-b last:border-b-0">
+            <Card>
+              <CardHeader>
+                <CardTitle>Últimas Conversões de Afiliados</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {Array.isArray(indicacoes) && indicacoes.slice(0, 5).map((indicacao) => (
+                  <div key={indicacao.id} className="flex justify-between items-center py-3 border-b border-border">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Users className="h-5 w-5 text-primary" />
+                      </div>
                       <div>
                         <p className="font-medium">Plano {indicacao.plano_contratado}</p>
-                        <p className="text-sm text-gray-600">{new Date(indicacao.data_conversao).toLocaleDateString('pt-BR')}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-green-600">R$ {indicacao.valor_comissao.toFixed(2)}</p>
-                        <Badge className={indicacao.status_pagamento === 'pago' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
-                          {indicacao.status_pagamento}
-                        </Badge>
+                        <p className="text-sm text-muted-foreground">{new Date(indicacao.data_conversao).toLocaleDateString('pt-BR')}</p>
                       </div>
                     </div>
-                  ))}
-                  {(!Array.isArray(indicacoes) || indicacoes.length === 0) && <p className="text-sm text-gray-500">Nenhuma indicação recente.</p>}
-                </CardContent>
-              </Card>
-            </div>
+                    <div className="text-right">
+                      <p className="font-semibold">R$ {indicacao.valor_comissao.toFixed(2)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Afiliado: {indicacao.afiliado_id}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+                {(!Array.isArray(indicacoes) || indicacoes.length === 0) && <p className="text-sm text-muted-foreground">Nenhuma indicação recente.</p>}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Nova Aba Planos */}
           <TabsContent value="planos" className="space-y-6">
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <CreditCard className="w-6 h-6 text-indigo-600" />
-                  Configuração de Preços dos Planos
-                </CardTitle>
+                <CardTitle>Configuração de Planos</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <h3 className="font-semibold text-lg mb-3 text-gray-700">Plano Básico</h3>
+                  <h3 className="font-semibold text-lg mb-3">Plano Básico</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-1">Preço Mensal (R$)</label>
+                      <label className="block text-sm font-medium mb-1 text-muted-foreground">Preço Mensal (R$)</label>
                       <Input
                         type="number"
-                        value={configPlanos.plano_basico_preco_mensal || ""}
-                        onChange={(e) => setConfigPlanos({...configPlanos, plano_basico_preco_mensal: Number(e.target.value)})}
-                        placeholder="67"
+                        name="plano_basico_preco_mensal"
+                        value={configPlanos?.plano_basico_preco_mensal || 67}
+                        onChange={atualizarConfigPlanos}
+                        placeholder="ex: 67.00"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Preço Anual (R$)</label>
+                      <label className="block text-sm font-medium mb-1 text-muted-foreground">Preço Anual (R$)</label>
                       <Input
                         type="number"
-                        value={configPlanos.plano_basico_preco_anual || ""}
-                        onChange={(e) => setConfigPlanos({...configPlanos, plano_basico_preco_anual: Number(e.target.value)})}
-                        placeholder="597"
+                        name="plano_basico_preco_anual"
+                        value={configPlanos?.plano_basico_preco_anual || 597}
+                        onChange={atualizarConfigPlanos}
+                        placeholder="ex: 597.00"
                       />
                     </div>
                   </div>
                 </div>
-                
-                <hr/>
                 
                 <div>
-                  <h3 className="font-semibold text-lg mb-3 text-gray-700">Plano Intermediário</h3>
+                  <h3 className="font-semibold text-lg mb-3">Plano Intermediário</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-1">Preço Mensal (R$)</label>
+                      <label className="block text-sm font-medium mb-1 text-muted-foreground">Preço Mensal (R$)</label>
                       <Input
                         type="number"
-                        value={configPlanos.plano_intermediario_preco_mensal || ""}
-                        onChange={(e) => setConfigPlanos({...configPlanos, plano_intermediario_preco_mensal: Number(e.target.value)})}
-                        placeholder="97"
+                        name="plano_intermediario_preco_mensal"
+                        value={configPlanos?.plano_intermediario_preco_mensal || 97}
+                        onChange={atualizarConfigPlanos}
+                        placeholder="ex: 97.00"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Preço Anual (R$)</label>
+                      <label className="block text-sm font-medium mb-1 text-muted-foreground">Preço Anual (R$)</label>
                       <Input
                         type="number"
-                        value={configPlanos.plano_intermediario_preco_anual || ""}
-                        onChange={(e) => setConfigPlanos({...configPlanos, plano_intermediario_preco_anual: Number(e.target.value)})}
-                        placeholder="870"
+                        name="plano_intermediario_preco_anual"
+                        value={configPlanos?.plano_intermediario_preco_anual || 897}
+                        onChange={atualizarConfigPlanos}
+                        placeholder="ex: 897.00"
                       />
                     </div>
                   </div>
                 </div>
-                
-                <hr/>
                 
                 <div>
-                  <h3 className="font-semibold text-lg mb-3 text-gray-700">Plano Premium</h3>
+                  <h3 className="font-semibold text-lg mb-3">Plano Premium</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-1">Preço Mensal (R$)</label>
+                      <label className="block text-sm font-medium mb-1 text-muted-foreground">Preço Mensal (R$)</label>
                       <Input
                         type="number"
-                        value={configPlanos.plano_premium_preco_mensal || ""}
-                        onChange={(e) => setConfigPlanos({...configPlanos, plano_premium_preco_mensal: Number(e.target.value)})}
-                        placeholder="127"
+                        name="plano_premium_preco_mensal"
+                        value={configPlanos?.plano_premium_preco_mensal || 197}
+                        onChange={atualizarConfigPlanos}
+                        placeholder="ex: 197.00"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Preço Anual (R$)</label>
+                      <label className="block text-sm font-medium mb-1 text-muted-foreground">Preço Anual (R$)</label>
                       <Input
                         type="number"
-                        value={configPlanos.plano_premium_preco_anual || ""}
-                        onChange={(e) => setConfigPlanos({...configPlanos, plano_premium_preco_anual: Number(e.target.value)})}
-                        placeholder="997"
+                        name="plano_premium_preco_anual"
+                        value={configPlanos?.plano_premium_preco_anual || 1997}
+                        onChange={atualizarConfigPlanos}
+                        placeholder="ex: 1997.00"
                       />
                     </div>
                   </div>
                 </div>
                 
-                <Button onClick={handleSalvarConfigPlanos} className="bg-indigo-600 hover:bg-indigo-700">
-                  <Save className="w-4 h-4 mr-2"/>
+                <Button onClick={handleSalvarConfigPlanos} className="bg-purple-600 hover:bg-purple-700">
+                  <Save className="w-4 h-4 mr-2" />
                   Salvar Configurações de Planos
                 </Button>
               </CardContent>
@@ -1231,112 +1215,107 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
 
           {/* Configurações Content */}
           <TabsContent value="configuracoes" className="space-y-6">
-            {/* Configuração de Pagamento */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <CreditCard className="w-6 h-6 text-indigo-600" />
-                  Configuração de Gateway de Pagamento
-                </CardTitle>
+                <CardTitle>Configurações de Pagamentos</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <h3 className="font-semibold text-lg mb-3 text-gray-700">MundPagg</h3>
+                  <h3 className="font-semibold text-lg mb-3">MundPagg</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-1">Client ID</label>
+                      <label className="block text-sm font-medium mb-1 text-muted-foreground">Client ID</label>
                       <Input
-                        type="password"
-                        value={configPagamento.gateway_mundpay_client_id || ""}
+                        name="gateway_mundpay_client_id"
+                        value={configPagamento?.gateway_mundpay_client_id || ""}
                         onChange={(e) => setConfigPagamento({...configPagamento, gateway_mundpay_client_id: e.target.value})}
-                        placeholder="Chave Client ID do MundPagg"
+                        placeholder="Client ID do MundPay"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Client Secret</label>
+                      <label className="block text-sm font-medium mb-1 text-muted-foreground">Client Secret</label>
                       <Input
                         type="password"
-                        value={configPagamento.gateway_mundpay_client_secret || ""}
+                        name="gateway_mundpay_client_secret"
+                        value={configPagamento?.gateway_mundpay_client_secret || ""}
                         onChange={(e) => setConfigPagamento({...configPagamento, gateway_mundpay_client_secret: e.target.value})}
-                        placeholder="Chave Client Secret do MundPagg"
+                        placeholder="Client Secret do MundPay"
                       />
                     </div>
                   </div>
                 </div>
                 <hr/>
                 <div>
-                  <h3 className="font-semibold text-lg mb-3 text-gray-700">Mercado Pago</h3>
+                  <h3 className="font-semibold text-lg mb-3">Mercado Pago</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-1">Public Key</label>
+                      <label className="block text-sm font-medium mb-1 text-muted-foreground">Public Key</label>
                       <Input
-                        type="password"
-                        value={configPagamento.gateway_mercadopago_public_key || ""}
+                        name="gateway_mercadopago_public_key"
+                        value={configPagamento?.gateway_mercadopago_public_key || ""}
                         onChange={(e) => setConfigPagamento({...configPagamento, gateway_mercadopago_public_key: e.target.value})}
                         placeholder="Public Key do Mercado Pago"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Access Token</label>
+                      <label className="block text-sm font-medium mb-1 text-muted-foreground">Access Token</label>
                       <Input
                         type="password"
-                        value={configPagamento.gateway_mercadopago_access_token || ""}
+                        name="gateway_mercadopago_access_token"
+                        value={configPagamento?.gateway_mercadopago_access_token || ""}
                         onChange={(e) => setConfigPagamento({...configPagamento, gateway_mercadopago_access_token: e.target.value})}
                         placeholder="Access Token do Mercado Pago"
                       />
                     </div>
-                    <div className="md:col-span-2">
-                      <label className="block text-sm font-medium mb-1">Webhook Secret (Opcional)</label>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-muted-foreground">Webhook Secret</label>
                       <Input
-                        type="password"
-                        value={configPagamento.gateway_mercadopago_webhook_secret || ""}
+                        name="gateway_mercadopago_webhook_secret"
+                        value={configPagamento?.gateway_mercadopago_webhook_secret || ""}
                         onChange={(e) => setConfigPagamento({...configPagamento, gateway_mercadopago_webhook_secret: e.target.value})}
-                        placeholder="Webhook Secret para notificações"
+                        placeholder="Webhook Secret do Mercado Pago"
                       />
                     </div>
                   </div>
                 </div>
-                <Button onClick={handleSalvarConfigPagamento} className="bg-indigo-600 hover:bg-indigo-700">
-                  <Save className="w-4 h-4 mr-2"/>
+                <Button onClick={handleSalvarConfigPagamento} className="bg-purple-600 hover:bg-purple-700">
+                  <Save className="w-4 h-4 mr-2" />
                   Salvar Configurações de Pagamento
                 </Button>
               </CardContent>
             </Card>
-
-            {/* Configuração de IA */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+            
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-3">
-                  <Brain className="w-6 h-6 text-purple-600" />
-                  Configuração da API de Inteligência Artificial
-                </CardTitle>
+                <CardTitle>Configurações da IA</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Chave da API (ex: OpenAI GPT)</label>
+                  <label className="block text-sm font-medium mb-1 text-muted-foreground">Chave de API OpenAI</label>
                   <Input
                     type="password"
-                    value={configIA.gpt_api_key || ""}
+                    name="gpt_api_key"
+                    value={configIA?.gpt_api_key || ""}
                     onChange={(e) => setConfigIA({...configIA, gpt_api_key: e.target.value})}
-                    placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                    placeholder="Chave de API para OpenAI/ChatGPT"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Modelo de IA Preferencial</label>
+                  <label className="block text-sm font-medium mb-1 text-muted-foreground">Modelo Preferencial</label>
                   <Input
-                    value={configIA.modelo_preferencial_ia || ""}
+                    name="modelo_preferencial_ia"
+                    value={configIA?.modelo_preferencial_ia || "gpt-3.5-turbo"}
                     onChange={(e) => setConfigIA({...configIA, modelo_preferencial_ia: e.target.value})}
                     placeholder="ex: gpt-4, gpt-3.5-turbo"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Este modelo será usado como padrão pelos agentes, se aplicável e suportado pela integração.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Este modelo será usado como padrão pelos agentes, se aplicável e suportado pela integração.</p>
                 </div>
                 <Button onClick={handleSalvarConfigIA} className="bg-purple-600 hover:bg-purple-700">
-                  <KeyRound className="w-4 h-4 mr-2"/>
+                  <Save className="w-4 h-4 mr-2" />
                   Salvar Configurações de IA
                 </Button>
               </CardContent>
             </Card>
-
           </TabsContent>
         </Tabs>
       </div>
