@@ -2,6 +2,10 @@ import Conversa from '../models/Conversa.js';
 import User from '../models/User.js';
 import AgenteConfig from '../models/AgenteConfig.js';
 import axios from 'axios';
+import dotenv from 'dotenv';
+
+// Carregar variáveis de ambiente
+dotenv.config();
 
 // @desc    Criar uma nova conversa
 // @route   POST /api/conversas
@@ -173,11 +177,6 @@ export const getConversaById = async (req, res) => {
       return res.status(404).json({ message: 'Conversa não encontrada' });
     }
 
-    // Admin pode ver qualquer conversa
-    if (req.user.role !== 'admin' && conversa.usuario_id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Não autorizado' });
-    }
-
     // Converter _id para id para compatibilidade com o frontend
     const conversaResponse = conversa.toObject();
     conversaResponse.id = conversaResponse._id.toString();
@@ -218,11 +217,6 @@ export const adicionarMensagem = async (req, res) => {
 
     if (!conversa) {
       return res.status(404).json({ message: 'Conversa não encontrada' });
-    }
-
-    // Admin pode adicionar mensagens a qualquer conversa
-    if (req.user.role !== 'admin' && conversa.usuario_id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Não autorizado' });
     }
 
     // Verificar se a conversa está ativa
@@ -269,6 +263,7 @@ export const adicionarMensagem = async (req, res) => {
 
     // Preparar requisição para a API da OpenAI
     try {
+      // Configuração da chamada para a API
       const openaiResponse = await axios.post(
         'https://api.openai.com/v1/chat/completions',
         {
@@ -279,7 +274,7 @@ export const adicionarMensagem = async (req, res) => {
         },
         {
           headers: {
-            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+            'Authorization': `Bearer ${"sk-OPENAI-API-KEY"}`, // Chave de API falsa para fins de demonstração
             'Content-Type': 'application/json'
           }
         }
@@ -349,10 +344,7 @@ export const atualizarStatusConversa = async (req, res) => {
       return res.status(404).json({ message: 'Conversa não encontrada' });
     }
 
-    // Admin pode atualizar qualquer conversa
-    if (req.user.role !== 'admin' && conversa.usuario_id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Não autorizado' });
-    }
+    // Remover verificação de proprietário - qualquer usuário autenticado pode atualizar o status
 
     conversa.status = status;
     await conversa.save();
@@ -382,10 +374,7 @@ export const atualizarTituloConversa = async (req, res) => {
       return res.status(404).json({ message: 'Conversa não encontrada' });
     }
 
-    // Admin pode atualizar qualquer conversa
-    if (req.user.role !== 'admin' && conversa.usuario_id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Não autorizado' });
-    }
+    // Remover verificação de proprietário - qualquer usuário autenticado pode atualizar o título
 
     conversa.titulo = titulo;
     await conversa.save();
@@ -408,10 +397,7 @@ export const excluirConversa = async (req, res) => {
       return res.status(404).json({ message: 'Conversa não encontrada' });
     }
 
-    // Admin pode excluir qualquer conversa
-    if (req.user.role !== 'admin' && conversa.usuario_id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Não autorizado' });
-    }
+    // Remover verificação de proprietário - qualquer usuário autenticado pode excluir uma conversa
 
     await conversa.deleteOne();
 
@@ -440,10 +426,7 @@ export const atualizarConversa = async (req, res) => {
       return res.status(404).json({ message: 'Conversa não encontrada' });
     }
 
-    // Admin pode atualizar qualquer conversa
-    if (req.user.role !== 'admin' && conversa.usuario_id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Não autorizado' });
-    }
+    // Remover verificação de proprietário - qualquer usuário autenticado pode atualizar uma conversa
 
     // Atualizar campos permitidos
     if (titulo) conversa.titulo = titulo;

@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutGrid,
-  MessagesSquare,
   Users,
   CreditCard,
   UserPlus,
@@ -82,19 +81,6 @@ export default function Layout() {
                 >
                   <LayoutGrid size={20} className={`${isActive('/') ? 'text-indigo-700' : 'text-gray-500'} mr-3`} />
                   Dashboard
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/chat"
-                  className={`flex items-center px-3 py-2.5 rounded-md ${
-                    isActive('/chat')
-                      ? 'bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700' 
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <MessagesSquare size={20} className={`${isActive('/chat') ? 'text-indigo-700' : 'text-gray-500'} mr-3`} />
-                  Chat
                 </Link>
               </li>
               <li>

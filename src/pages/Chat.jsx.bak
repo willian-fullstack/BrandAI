@@ -77,7 +77,7 @@ export default function Chat() {
         try {
           const conversaData = await Conversa.getById(conversaParam);
           
-          if (conversaData) {
+          if (conversaData && conversaData.usuario_id === userData.id) {
             setConversa(conversaData);
             setMensagens(conversaData.mensagens || []);
 
@@ -86,12 +86,26 @@ export default function Chat() {
               const agentesConfigs = await AgenteConfig.filter({ codigo: conversaData.agente_id });
               if (agentesConfigs.length > 0) {
                 setAgenteConfigData(agentesConfigs[0]);
+                
+                // Se for agente de designer, carregar imagens geradas anteriormente
+                if (conversaData.agente_id === 'designer') {
+                  try {
+                    const imagesResult = await GetGeneratedImages(5); // Limite de 5 imagens
+                    setPreviousImages(imagesResult.images || []);
+                  } catch (error) {
+                    console.warn("Erro ao carregar imagens anteriores:", error);
+                  }
+                }
               }
             } catch (error) {
               console.warn("Configuração do agente não encontrada para conversa existente:", error);
             }
+            
+            // Removendo qualquer redirecionamento depois de carregar a conversa com sucesso
+            console.log("Conversa carregada com sucesso:", conversaData.id);
           } else {
-            // Usar o hook do React Router para navegar
+            // Verificar se a conversa não pertence ao usuário atual ou não existe
+            console.log("Conversa não encontrada ou não pertence ao usuário atual");
             navigate("/agentes", { replace: true });
             return;
           }
