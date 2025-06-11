@@ -5,18 +5,19 @@ import { AgenteConfig } from "@/api/entities"; // Importar AgenteConfig
 import { InvokeLLM, GetGeneratedImages } from "@/api/integrations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { 
   Send, 
   ArrowLeft, 
   Bot,
   User as UserIcon,
   Sparkles,
-  AlertCircle,
-  Wand2Icon
+  Wand2,
+  Loader2,
+  Settings,
+  Trash2,
+  ChevronRight
 } from "lucide-react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import DesignerInterface from "@/components/chat/DesignerInterface"; // Importar DesignerInterface
 import { agentesConfig, planosConfig } from "@/config/agentes"; // Importar agentesConfig e planosConfig do arquivo centralizado
@@ -30,7 +31,8 @@ export default function Chat() {
   const [loading, setLoading] = useState(true);
   const [agenteConfigData, setAgenteConfigData] = useState(null); // Novo estado
   const [previousImages, setPreviousImages] = useState([]);
-  const [showDesignerInterface, setShowDesignerInterface] = useState(false);
+  const [showDesignerPanel, setShowDesignerPanel] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
   const messagesEndRef = useRef(null);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -199,538 +201,593 @@ export default function Chat() {
       if (!temDocumentos && !promptDoArquivoConfig) {
         const mensagemErro = {
           tipo: "agente",
-          conteudo: `Desculpe, este agente ainda não foi treinado. Para que eu possa ajudar você adequadamente, um administrador precisa:
-
-1. Configurar instruções específicas para este agente no painel Admin
-2. Fazer upload de documentos de treinamento
-
-${user?.role === 'admin' ? `Como você é um administrador, pode [sincronizar os agentes](/admin?tab=agentes&sync=true) para resolver possíveis problemas de configuração.` : 'Acesse o painel Admin → Agentes IA para configurar este agente.'}`,
-          remetente: "agente",
+          conteudo: "Desculpe, este agente não está configurado corretamente. Entre em contato com o suporte.",
+          remetente: "sistema",
           timestamp: new Date().toISOString()
         };
-
-        const mensagensFinais = [...novasMensagens, mensagemErro];
-        setMensagens(mensagensFinais);
+        setMensagens([...novasMensagens, mensagemErro]);
         setCarregando(false);
         return;
       }
 
-      // Preparar contexto para o agente
-      const contexto = novasMensagens.map(m => 
-        `${m.tipo === 'usuario' ? 'Usuário' : 'Assistente'}: ${m.conteudo}`
-      ).join('\n');
+      // Preparar histórico de mensagens para enviar para a API
+      const historicoMensagens = novasMensagens.map(msg => ({
+        role: msg.tipo === "usuario" ? "user" : "assistant",
+        content: msg.conteudo
+      }));
 
-      // Usar apenas o prompt do arquivo de configuração
-      const promptEspecifico = promptDoArquivoConfig || '';
-      
-      const prompt = `${promptEspecifico}
-
-INSTRUÇÕES IMPORTANTES:
-1. Use PRIMARIAMENTE as informações dos documentos de treinamento anexados
-2. Mantenha sempre o foco na sua especialidade conforme definido nos documentos
-3. Você pode usar conhecimento geral para complementar e enriquecer suas respostas, mas sempre dentro do contexto da sua especialidade
-4. Se uma pergunta não estiver relacionada à sua área de especialidade definida nos documentos, redirecione educadamente para sua especialidade
-5. Seja inteligente, útil e prático, sempre baseando suas respostas principais no conteúdo dos documentos
-
-Histórico da conversa:
-${contexto}
-
-Responda de forma inteligente e útil, priorizando o conhecimento dos documentos de treinamento, mas complementando com expertise relevante quando apropriado:`;
-
-      // Preparar URLs dos documentos
-      const documentUrls = agenteConfigData?.documentos_treinamento?.map(doc => doc.caminho) || [];
-
-      // Adicionar log para depuração
-      if (documentUrls.length > 0) {
-        console.log(`Enviando ${documentUrls.length} documentos para o LLM:`, documentUrls);
-      } else {
-        console.log('Nenhum documento anexado para enviar ao LLM');
+      // Adicionar prompt do sistema se existir no arquivo de configuração
+      if (promptDoArquivoConfig) {
+        historicoMensagens.unshift({
+          role: "system",
+          content: promptDoArquivoConfig
+        });
       }
 
-      // Chamar IA
-      const requestParams = {
-        prompt: prompt,
-        agente_id: conversa.agente_id || agenteParam || conversa.agente || ''
-      };
+      // Chamar a API para obter resposta do agente
+      const resposta = await InvokeLLM(
+        historicoMensagens,
+        conversa.agente_id,
+        temDocumentos ? agenteConfigData.documentos_treinamento : null
+      );
 
-      console.log("Enviando request com agente_id:", requestParams.agente_id);
+      // Processar resposta
+      if (resposta && resposta.resposta) {
+        const mensagemAgente = {
+          tipo: "agente",
+          conteudo: resposta.resposta,
+          remetente: "agente",
+          timestamp: new Date().toISOString()
+        };
 
-      // Adicionar documentos se existirem
-      if (documentUrls.length > 0) {
-        requestParams.file_urls = documentUrls;
-      }
+        const mensagensAtualizadas = [...novasMensagens, mensagemAgente];
+        setMensagens(mensagensAtualizadas);
 
-      const resposta = await InvokeLLM(requestParams);
-
-      const mensagemAgente = {
-        tipo: "agente",
-        conteudo: resposta,
-        remetente: "agente",
-        timestamp: new Date().toISOString()
-      };
-
-      const mensagensFinais = [...novasMensagens, mensagemAgente];
-      setMensagens(mensagensFinais);
-
-      // Preparar dados da conversa para salvar
-      let conversaParaSalvar = {
-        ...conversa,
-        mensagens: mensagensFinais
-      };
-
-      // Garantir que todos os campos obrigatórios estejam presentes
-      if (!conversaParaSalvar.titulo) {
-        conversaParaSalvar.titulo = `Conversa com ${agenteAtual.nome || 'Agente'}`;
-      }
-      
-      // Garantir que o campo agente_id esteja sempre presente e seja o mesmo do agenteParam
-      if (!conversaParaSalvar.agente_id) {
-        conversaParaSalvar.agente_id = agenteParam || (conversaParaSalvar.agente ? conversaParaSalvar.agente : '');
-      }
-
-      try {
-        let conversaSalva;
-        
-        if (conversa.id) {
-          // Atualizar conversa existente
-          conversaSalva = await Conversa.update(conversa.id, conversaParaSalvar);
-        } else {
-          // Criar nova conversa
-          console.log("Criando nova conversa com dados:", JSON.stringify(conversaParaSalvar));
-          conversaSalva = await Conversa.create(conversaParaSalvar);
-          console.log("Conversa criada:", JSON.stringify(conversaSalva));
-          
-          if (conversaSalva && conversaSalva.id) {
-            // Atualizar o estado com a conversa salva que contém o ID
+        // Se for primeira mensagem, salvar conversa no banco
+        if (!conversa.id) {
+          try {
+            const conversaSalva = await Conversa.create({
+              ...conversa,
+              mensagens: mensagensAtualizadas
+            });
             setConversa(conversaSalva);
-            // Atualizar URL sem recarregar a página
-            const novaUrl = createPageUrl(`Chat?conversa=${conversaSalva.id}`);
-            window.history.replaceState({}, '', novaUrl);
-          } else {
-            console.error("Conversa criada sem ID:", conversaSalva);
-            throw new Error("Conversa criada sem ID válido");
+            // Atualizar URL para incluir o ID da conversa
+            navigate(`/chat?conversa=${conversaSalva.id}`, { replace: true });
+          } catch (error) {
+            console.error("Erro ao salvar conversa:", error);
+          }
+        } else {
+          // Atualizar conversa existente
+          try {
+            await Conversa.update(conversa.id, {
+              mensagens: mensagensAtualizadas
+            });
+          } catch (error) {
+            console.error("Erro ao atualizar conversa:", error);
           }
         }
-      } catch (error) {
-        console.error("Erro ao salvar conversa:", error);
-        // Não redirecionar em caso de erro, apenas mostrar alerta
-        alert("Erro ao salvar conversa: " + (error.message || "Erro desconhecido"));
+      } else {
+        throw new Error("Resposta inválida da API");
       }
-
-      // Descontar crédito (apenas para não-admin)
-      if (user?.role !== 'admin') {
-        await User.updateMyUserData({
-          creditos_restantes: (user.creditos_restantes || 0) - 1
-        });
-        setUser(prev => ({
-          ...prev,
-          creditos_restantes: (prev.creditos_restantes || 0) - 1
-        }));
-      }
-
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
-      alert("Erro ao enviar mensagem. Tente novamente.");
+      const mensagemErro = {
+        tipo: "agente",
+        conteudo: "Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde.",
+        remetente: "sistema",
+        timestamp: new Date().toISOString()
+      };
+      setMensagens([...novasMensagens, mensagemErro]);
     } finally {
       setCarregando(false);
     }
   };
 
   const handleImageGenerated = async (imageUrl, prompt) => {
-    setCarregando(true);
+    if (!imageUrl || !conversa) return;
+
+    // Limpar URL para evitar problemas com caracteres especiais
+    const cleanUrl = imageUrl.trim()
+      .replace(/[\n\r\t]/g, '')
+      .replace(/&amp;/g, '&')
+      .replace(/\\/g, '/');
+
+    console.log("URL da imagem gerada:", cleanUrl);
+
+    // Criar mensagem do usuário com o prompt
+    const mensagemUsuario = {
+      tipo: "usuario",
+      conteudo: `Gere uma imagem: ${prompt}`,
+      remetente: "usuario",
+      timestamp: new Date().toISOString()
+    };
+
+    // Criar mensagem do agente com a imagem em formato JSON
+    const mensagemAgente = {
+      tipo: "agente",
+      conteudo: JSON.stringify({
+        image_url: cleanUrl,
+        prompt: prompt || "Imagem gerada pela IA"
+      }),
+      remetente: "agente",
+      timestamp: new Date().toISOString()
+    };
+
+    const novasMensagens = [...mensagens, mensagemUsuario, mensagemAgente];
+    setMensagens(novasMensagens);
+
+    // Rolar para o final
+    setTimeout(scrollToBottom, 100);
+
+    // Salvar ou atualizar conversa
     try {
-      const mensagemImagem = {
-        tipo: "agente",
-        conteudo: `Imagem gerada com sucesso! 
-
-**Prompt usado:** ${prompt}
-
-![Imagem gerada](${imageUrl})
-
-Você pode fazer download da imagem clicando com o botão direito sobre ela e selecionando "Salvar imagem como...".
-
-Precisa de alguma modificação ou outra imagem?`,
-        remetente: "agente",
-        timestamp: new Date().toISOString()
-      };
-
-      const mensagensFinais = [...mensagens, mensagemImagem];
-      setMensagens(mensagensFinais);
-
-      // Preparar dados da conversa para salvar
-      let conversaParaSalvar = {
-        ...conversa,
-        mensagens: mensagensFinais
-      };
-
-      // Garantir que todos os campos obrigatórios estejam presentes
-      if (!conversaParaSalvar.titulo) {
-        conversaParaSalvar.titulo = `Conversa com ${agenteAtual.nome || 'Agente'}`;
-      }
-      
-      if (!conversaParaSalvar.agente_id && conversaParaSalvar.agente) {
-        conversaParaSalvar.agente_id = conversaParaSalvar.agente;
-      }
-
-      try {
-        let conversaSalva;
-        
-        if (conversa.id) {
-          // Atualizar conversa existente
-          conversaSalva = await Conversa.update(conversa.id, conversaParaSalvar);
-        } else {
-          // Criar nova conversa
-          console.log("Criando nova conversa com dados:", JSON.stringify(conversaParaSalvar));
-          conversaSalva = await Conversa.create(conversaParaSalvar);
-          console.log("Conversa criada:", JSON.stringify(conversaSalva));
-          
-          if (conversaSalva && conversaSalva.id) {
-            // Atualizar o estado com a conversa salva que contém o ID
-            setConversa(conversaSalva);
-            // Atualizar URL sem recarregar a página
-            const novaUrl = createPageUrl(`Chat?conversa=${conversaSalva.id}`);
-            window.history.replaceState({}, '', novaUrl);
-          } else {
-            console.error("Conversa criada sem ID:", conversaSalva);
-            throw new Error("Conversa criada sem ID válido");
-          }
-        }
-      } catch (error) {
-        console.error("Erro ao salvar conversa:", error);
-        // Não redirecionar em caso de erro, apenas mostrar alerta
-        alert("Erro ao salvar conversa: " + (error.message || "Erro desconhecido"));
-      }
-
-      // Descontar crédito (apenas para não-admin) for image generation
-      if (user?.role !== 'admin') {
-        await User.updateMyUserData({
-          creditos_restantes: (user.creditos_restantes || 0) - 1
+      if (!conversa.id) {
+        const conversaSalva = await Conversa.create({
+          ...conversa,
+          mensagens: novasMensagens
         });
-        setUser(prev => ({
-          ...prev,
-          creditos_restantes: (prev.creditos_restantes || 0) - 1
-        }));
+        setConversa(conversaSalva);
+        navigate(`/chat?conversa=${conversaSalva.id}`, { replace: true });
+      } else {
+        await Conversa.update(conversa.id, {
+          mensagens: novasMensagens
+        });
       }
-
     } catch (error) {
-      console.error("Erro ao processar imagem gerada:", error);
-      alert("Erro ao processar imagem gerada.");
-    } finally {
-      setCarregando(false);
+      console.error("Erro ao salvar conversa com imagem:", error);
     }
   };
 
+  // Função para formatar datas corretamente, evitando "Invalid Date"
+  const formatarData = (dataString) => {
+    if (!dataString) return "Data desconhecida";
+    
+    try {
+      const data = new Date(dataString);
+      // Verificar se a data é válida
+      if (isNaN(data.getTime())) {
+        return "Data inválida";
+      }
+      return data.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error("Erro ao formatar data:", error);
+      return "Data inválida";
+    }
+  };
+
+  // Função para alternar a visibilidade do painel do Designer
+  const toggleDesignerPanel = () => {
+    setShowDesignerPanel(!showDesignerPanel);
+  };
+
+  // Renderização condicional para estado de carregamento
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-      </div>
-    );
-  }
-
-  if (!conversa) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Conversa não encontrada</h2>
-          <Link to={createPageUrl("Agentes")}>
-            <Button>Voltar aos Agentes</Button>
-          </Link>
+      <div className="flex items-center justify-center h-screen">
+        <div className="flex flex-col items-center">
+          <div className="w-16 h-16 rounded-full bg-gradient-purple flex items-center justify-center mb-4 animate-pulse">
+            <Loader2 className="w-8 h-8 text-white animate-spin" />
+          </div>
+          <p className="text-muted-foreground">Carregando conversa...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-50 to-indigo-50 flex flex-col">
-      {/* Header */}
-      <div className="bg-white/80 backdrop-blur-xl border-b border-white/20 p-4 shadow-sm">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to={createPageUrl("Agentes")}>
-              <Button variant="outline" size="icon">
-                <ArrowLeft className="w-4 h-4" />
-              </Button>
-            </Link>
-            <div className="flex items-center gap-3">
-              <div className={`w-12 h-12 bg-gradient-to-r ${agenteAtual.cor} rounded-full flex items-center justify-center text-xl`}>
-                {agenteAtual.icon}
-              </div>
+    <div className="flex flex-col h-screen bg-background">
+      {/* Cabeçalho */}
+      <header className="border-b border-border py-3 px-4 flex items-center justify-between z-10">
+        <div className="flex items-center">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="mr-2"
+            onClick={() => navigate(-1)}
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div className="flex items-center">
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center mr-3 ${
+              conversa?.agente_id?.includes('marketing') ? 'bg-gradient-blue' :
+              conversa?.agente_id?.includes('visual') ? 'bg-gradient-purple' :
+              conversa?.agente_id?.includes('seo') ? 'bg-gradient-green' :
+              'bg-gradient-orange'
+            }`}>
+              {agenteAtual.icon ? (
+                typeof agenteAtual.icon === 'string' ? (
+                  <span className="text-white">{agenteAtual.icon}</span>
+                ) : (
+                  <agenteAtual.icon className="h-5 w-5 text-white" />
+                )
+              ) : (
+                <Bot className="h-5 w-5 text-white" />
+              )}
+            </div>
+            <div className="flex items-center gap-2">
               <div>
-                <h1 className="text-xl font-bold text-gray-900">{agenteAtual.nome}</h1>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm text-gray-600">Agente IA Especializado</p>
-                  {agenteConfigData?.documentos_treinamento?.length > 0 && (
-                    <Badge className="bg-green-100 text-green-800 text-xs">
-                      {agenteConfigData.documentos_treinamento.length} docs treinados
-                    </Badge>
-                  )}
-                </div>
+                <h1 className="font-medium text-lg">{agenteAtual.nome || "Agente IA"}</h1>
+                <p className="text-xs text-muted-foreground">{conversa?.titulo || "Nova conversa"}</p>
               </div>
+              
+              {/* Botão para toggle do Designer IA (apenas para o agente Designer) */}
+              {conversa?.agente_id?.toLowerCase().includes('designer') && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-2 flex items-center gap-1"
+                  onClick={toggleDesignerPanel}
+                >
+                  <Wand2 className="h-4 w-4 mr-1" />
+                  {showDesignerPanel ? 'Esconder Designer' : 'Mostrar Designer'}
+                </Button>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Badge className="bg-indigo-100 text-indigo-800">
-              <Sparkles className="w-3 h-3 mr-1" />
-              {user?.role === 'admin' ? '∞' : (user?.creditos_restantes || 0)} créditos
-            </Badge>
-            {user?.role === 'admin' && (
-              <Badge className="bg-red-100 text-red-800">
-                Admin
-              </Badge>
-            )}
-            {(conversa.agente === 'designer' || conversa.agente_id === 'designer') && (
-              <Button
-                variant={showDesignerInterface ? "default" : "outline"}
-                size="sm"
-                className="ml-2"
-                onClick={() => setShowDesignerInterface(!showDesignerInterface)}
-              >
-                <Wand2Icon className="w-4 h-4 mr-1" /> Gerador de Imagens
-              </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => setShowSettings(!showSettings)}
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
+            {showSettings && (
+              <div className="absolute right-0 mt-2 w-56 glass-card rounded-lg shadow-glass border border-border z-50">
+                <div className="p-2">
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                    onClick={() => {
+                      if (confirm("Tem certeza que deseja excluir esta conversa?")) {
+                        // Implementar exclusão
+                        navigate('/conversas');
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir conversa
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Área de Mensagens */}
-      <div className="flex-1 overflow-y-auto p-4">
-        <div className="max-w-4xl mx-auto space-y-4">
-          {/* Interface do Designer quando o botão é clicado ou quando é a primeira vez */}
-          {((conversa.agente === 'designer' || conversa.agente_id === 'designer') && 
-            (showDesignerInterface || mensagens.length === 0)) && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-8"
-            >
-              {mensagens.length > 0 && (
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold">Gerador de Imagens</h3>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setShowDesignerInterface(false)}
-                  >
-                    ✕
-                  </Button>
-                </div>
-              )}
-              
-              {mensagens.length === 0 && (
-                <div className="text-center py-8">
-                  <div className={`w-20 h-20 mx-auto mb-6 bg-gradient-to-r ${agenteAtual.cor} rounded-full flex items-center justify-center text-3xl`}>
-                    {agenteAtual.icon}
-                  </div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-3">
-                    Olá! Eu sou seu especialista em {agenteAtual.nome}
-                  </h2>
-                  <p className="text-gray-600 max-w-2xl mx-auto mb-8">
-                    Estou aqui para criar imagens personalizadas para sua marca. Posso gerar logotipos, artes para redes sociais, banners e muito mais!
-                  </p>
-                </div>
-              )}
-              
-              <DesignerInterface 
-                onImageGenerated={handleImageGenerated} 
-                user={user} 
-                agenteConfigData={agenteConfigData}
-              />
-            </motion.div>
-          )}
-          
-          {mensagens.length === 0 && !(conversa.agente === 'designer' || conversa.agente_id === 'designer') && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center py-12"
-            >
-              <div className={`w-20 h-20 mx-auto mb-6 bg-gradient-to-r ${agenteAtual.cor} rounded-full flex items-center justify-center text-3xl`}>
-                {agenteAtual.icon}
-              </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">
-                Olá! Eu sou seu especialista em {agenteAtual.nome}
-              </h2>
-              <p className="text-gray-600 max-w-2xl mx-auto">
-                Estou aqui para ajudar sua marca a crescer com estratégias comprovadas. Pode me perguntar qualquer coisa sobre {agenteAtual.nome.toLowerCase()}!
-              </p>
-            </motion.div>
-          )}
-          
-          <AnimatePresence>
-            {mensagens.map((mensagem, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`flex ${mensagem.tipo === 'usuario' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div className={`flex items-start gap-3 max-w-3xl ${
-                  mensagem.tipo === 'usuario' ? 'flex-row-reverse' : 'flex-row'
-                }`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    mensagem.tipo === 'usuario' 
-                      ? 'bg-indigo-600' 
-                      : `bg-gradient-to-r ${agenteAtual.cor}`
+      {/* Área principal - Layout em duas colunas quando for Designer IA */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Coluna da conversa (sempre presente) */}
+        <div className={`flex flex-col ${
+          conversa?.agente_id?.toLowerCase().includes('designer') && showDesignerPanel 
+            ? 'w-3/5 border-r border-border' 
+            : 'w-full'
+        }`}>
+          {/* Área de mensagens com rolagem */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-6">
+            {/* Mensagem de boas-vindas */}
+            {mensagens.length === 0 && (
+              <div className="flex justify-center py-8">
+                <div className="glass-card p-6 max-w-lg text-center">
+                  <div className={`w-16 h-16 rounded-xl mx-auto mb-4 flex items-center justify-center ${
+                    conversa?.agente_id?.includes('marketing') ? 'bg-gradient-blue' :
+                    conversa?.agente_id?.includes('visual') ? 'bg-gradient-purple' :
+                    conversa?.agente_id?.includes('seo') ? 'bg-gradient-green' :
+                    'bg-gradient-orange'
                   }`}>
-                    {mensagem.tipo === 'usuario' ? (
-                      <UserIcon className="w-4 h-4 text-white" />
+                    {agenteAtual.icon ? (
+                      typeof agenteAtual.icon === 'string' ? (
+                        <span className="text-white text-2xl">{agenteAtual.icon}</span>
+                      ) : (
+                        <agenteAtual.icon className="h-8 w-8 text-white" />
+                      )
                     ) : (
-                      <Bot className="w-4 h-4 text-white" />
+                      <Bot className="h-8 w-8 text-white" />
                     )}
                   </div>
-                  <div className={`p-4 rounded-2xl ${
-                    mensagem.tipo === 'usuario' 
-                      ? 'bg-indigo-600 text-white' 
-                      : 'bg-white/80 backdrop-blur-sm text-gray-900 shadow-lg'
-                  }`}>
-                    <div className="whitespace-pre-wrap leading-relaxed">
-                      {/* Renderizar markdown simples para imagens */}
-                      {mensagem.conteudo && mensagem.conteudo.includes('![') ? (
-                        <div>
-                          {mensagem.conteudo.split('\n').map((linha, i) => {
-                            if (linha.includes('![') && linha.includes('](')) {
-                              const match = linha.match(/!\[([^\]]*)\]\(([^)]+)\)/);
-                              if (match) {
-                                // Verificar se a URL da imagem é relativa ou absoluta
-                                let imageUrl = match[2];
-                                if (imageUrl.startsWith('/') && !imageUrl.startsWith('//')) {
-                                  // URL relativa - adicionar base URL do backend
-                                  const baseUrl = import.meta.env.VITE_API_URL.replace('/api', '');
-                                  imageUrl = `${baseUrl}${imageUrl}`;
-                                }
-                                
-                                return (
-                                  <div key={i} className="my-4">
-                                    <img 
-                                      src={imageUrl} 
-                                      alt={match[1]} 
-                                      className="max-w-full h-auto rounded-lg shadow-lg mx-auto"
-                                      style={{ maxHeight: '400px' }}
-                                      onError={(e) => {
-                                        console.error('Erro ao carregar imagem:', imageUrl);
-                                        e.target.onerror = null;
-                                        e.target.src = 'https://placehold.co/600x400?text=Imagem+não+encontrada';
-                                      }}
-                                    />
-                                  </div>
-                                );
-                              }
-                            }
-                            return <p key={i}>{linha}</p>;
-                          })}
-                        </div>
-                      ) : (
-                        mensagem.conteudo || ''
-                      )}
+                  <h2 className="text-xl font-semibold mb-2">
+                    {agenteAtual.nome || "Agente IA"}
+                  </h2>
+                  <p className="text-muted-foreground mb-4">
+                    {agenteAtual.descricao || "Este agente está pronto para ajudar você com suas necessidades."}
+                  </p>
+                  <div className="text-sm text-muted-foreground">
+                    {user?.role !== 'admin' && (
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        <span>Créditos disponíveis: {user?.creditos_restantes || 0}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Lista de mensagens */}
+            <AnimatePresence>
+              {mensagens.map((mensagem, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className={`flex ${mensagem.tipo === "usuario" ? "justify-end" : "justify-start"}`}
+                >
+                  <div 
+                    className={`max-w-[80%] md:max-w-[70%] rounded-lg p-3 ${
+                      mensagem.tipo === "usuario" 
+                        ? "bg-primary text-primary-foreground" 
+                        : "bg-card border border-border"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-6 h-6 rounded-full flex items-center justify-center">
+                        {mensagem.tipo === "usuario" ? (
+                          <UserIcon className="w-4 h-4" />
+                        ) : (
+                          <Bot className="w-4 h-4" />
+                        )}
+                      </div>
+                      <p className="text-sm font-medium">
+                        {mensagem.tipo === "usuario" ? "Você" : agenteAtual.nome}
+                      </p>
+                      <p className="text-xs ml-auto opacity-70">
+                        {formatarData(mensagem.timestamp)}
+                      </p>
                     </div>
+                    <div className="mt-1">
+                      {formatMessageContent(mensagem.conteudo)}
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            {/* Indicador de digitação */}
+            {carregando && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex justify-start"
+              >
+                <div className="glass-card rounded-2xl p-4 max-w-[85%] md:max-w-[70%]">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center mr-2">
+                      <Bot className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="text-sm">{agenteAtual.nome || "Agente"}</div>
+                  </div>
+                  <div className="mt-2 flex space-x-2">
+                    <div className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }}></div>
+                    <div className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "200ms" }}></div>
+                    <div className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "400ms" }}></div>
                   </div>
                 </div>
               </motion.div>
-            ))}
-          </AnimatePresence>
+            )}
 
-          {carregando && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex justify-start"
+            {/* Referência para rolagem automática */}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Área de entrada de mensagem (sempre fixo no fundo) */}
+          <div className="border-t border-border p-4">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                enviarMensagem();
+              }}
+              className="flex gap-2"
             >
-              <div className="flex items-start gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-r ${agenteAtual.cor}`}>
-                  <Bot className="w-4 h-4 text-white" />
+              <Input
+                value={novaMensagem}
+                onChange={(e) => setNovaMensagem(e.target.value)}
+                placeholder="Digite sua mensagem..."
+                className="flex-1 bg-secondary border-border focus:border-primary"
+                disabled={carregando}
+              />
+              <Button
+                type="submit"
+                disabled={!novaMensagem.trim() || carregando}
+                className="bg-primary hover:bg-primary/90"
+              >
+                {carregando ? (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Send className="h-5 w-5" />
+                )}
+              </Button>
+            </form>
+            <div className="mt-2 text-xs text-muted-foreground text-center">
+              {user?.role !== 'admin' && (
+                <div className="flex items-center justify-center gap-1">
+                  <Sparkles className="h-3 w-3 text-primary" />
+                  <span>Créditos disponíveis: {user?.creditos_restantes || 0}</span>
                 </div>
-                <div className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl shadow-lg">
-                  <div className="flex items-center gap-2">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                    </div>
-                    <span className="text-sm text-gray-600">Pensando...</span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          <div ref={messagesEndRef} />
+              )}
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Input de Mensagem */}
-      <div className="bg-white/80 backdrop-blur-xl border-t border-white/20 p-4">
-        <div className="max-w-4xl mx-auto">
-          {/* Interface especial para Designer quando há mensagens */}
-          {conversa.agente === 'designer' && mensagens.length > 0 && (
-            <div className="mb-4">
+        {/* Coluna do Designer (fixo à direita, condicional) */}
+        {conversa?.agente_id?.toLowerCase().includes('designer') && showDesignerPanel && (
+          <div className="w-2/5 bg-background flex flex-col h-full overflow-hidden">
+            <div className="p-4 bg-muted/30 flex items-center justify-between border-b border-border">
+              <div className="flex items-center gap-2">
+                <Wand2 className="h-5 w-5 text-primary" />
+                <h2 className="font-semibold">Gerador de Imagens</h2>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleDesignerPanel}
+                className="ml-auto"
+                title="Esconder painel"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
               <DesignerInterface 
-                onImageGenerated={handleImageGenerated} 
-                user={user} 
+                onImageGenerated={handleImageGenerated}
+                user={user}
                 agenteConfigData={agenteConfigData}
+                previousImages={previousImages}
               />
             </div>
-          )}
-          
-          {conversa.agente_id === 'designer' && previousImages.length > 0 && (
-            <div className="mb-4">
-              <h3 className="text-sm font-medium text-gray-500 mb-2">Imagens recentes</h3>
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {previousImages.map((image, index) => (
-                  <div 
-                    key={image._id || index} 
-                    className="flex-shrink-0 relative cursor-pointer hover:opacity-90 transition-opacity"
-                    onClick={() => {
-                      // Ao clicar na imagem, sugerir um prompt similar
-                      setNovaMensagem(`Crie uma imagem similar a esta que eu gerei antes: ${image.prompt}`);
-                    }}
-                  >
-                    <img 
-                      src={image.image_url} 
-                      alt={`Imagem ${index + 1}`}
-                      className="h-16 w-16 object-cover rounded-md"
-                    />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 rounded-md flex items-center justify-center">
-                      <span className="text-white opacity-0 hover:opacity-100">Usar</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          <div className="flex gap-3">
-            <Input
-              placeholder={conversa.agente === 'designer' ? 
-                "Descreva modificações ou peça uma nova imagem..." : 
-                "Digite sua pergunta..."
-              }
-              value={novaMensagem}
-              onChange={(e) => setNovaMensagem(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && enviarMensagem()}
-              disabled={carregando || (user?.role !== 'admin' && user?.creditos_restantes <= 0)}
-              className="flex-1 bg-white/60 border-gray-200"
-            />
-            <Button 
-              onClick={enviarMensagem}
-              disabled={!novaMensagem.trim() || carregando || (user?.role !== 'admin' && user?.creditos_restantes <= 0)}
-              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
-            >
-              <Send className="w-4 h-4" />
-            </Button>
           </div>
-          
-          {user?.role !== 'admin' && user?.creditos_restantes <= 0 && (
-            <p className="text-center text-red-600 text-sm mt-2">
-              Sem créditos disponíveis. 
-              <Link to={createPageUrl("Planos")} className="underline ml-1">
-                Faça upgrade do seu plano
-              </Link>
-            </p>
-          )}
-        </div>
+        )}
       </div>
     </div>
   );
+}
+
+// Função para renderizar o conteúdo da mensagem, incluindo imagens
+function formatMessageContent(content) {
+  if (!content) return null;
+
+  // Verificar se é um texto JSON
+  if (typeof content === 'string' && (content.startsWith('{') || content.startsWith('['))) {
+    try {
+      const jsonContent = JSON.parse(content);
+      
+      // Se for um objeto com campo 'image_url' ou 'url'
+      if (jsonContent && (jsonContent.image_url || jsonContent.url)) {
+        const imageUrl = jsonContent.image_url || jsonContent.url;
+        
+        // Verificar se é um URL válido e limpar caracteres problemáticos
+        try {
+          const cleanUrl = imageUrl.trim()
+            .replace(/[\n\r\t]/g, '')
+            .replace(/&amp;/g, '&')
+            .replace(/\\/g, '/');
+            
+          return (
+            <div className="flex flex-col items-center my-4 w-full">
+              <div className="relative w-full max-w-md bg-secondary/20 rounded-lg overflow-hidden shadow-md">
+                <img 
+                  src={cleanUrl} 
+                  alt="Imagem gerada" 
+                  className="w-full h-auto object-contain rounded-lg"
+                  style={{ maxHeight: '400px' }}
+                  loading="lazy"
+                  onError={(e) => {
+                    console.error("Erro ao carregar imagem:", cleanUrl);
+                    e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzJhMmEyYSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMThweCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgZmlsbD0iI2ZmZiI+SW1hZ2VtIGluZGlzcG9uw612ZWw8L3RleHQ+PHRleHQgeD0iNTAlIiB5PSI2NSUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNHB4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiBmaWxsPSIjYWFhIj5FcnJvIGFvIGNhcnJlZ2FyIGltYWdlbTwvdGV4dD48L3N2Zz4=';
+                    e.target.alt = 'Imagem indisponível';
+                  }}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">{jsonContent.prompt || "Imagem gerada pela IA"}</p>
+            </div>
+          );
+        } catch (error) {
+          console.error("Erro ao processar URL da imagem:", error);
+          return <p className="text-rose-500">Erro ao carregar imagem: URL inválida</p>;
+        }
+      }
+      
+      // Se for outro tipo de objeto JSON, exibir como texto formatado
+      return <pre className="bg-secondary/30 p-3 rounded-md overflow-auto text-xs my-2">{JSON.stringify(jsonContent, null, 2)}</pre>;
+    } catch (error) {
+      // Se falhar ao analisar JSON, tratar como texto normal
+      console.error("Erro ao analisar JSON:", error);
+    }
+  }
+
+  // Processar links em texto normal
+  let processedContent = content;
+  
+  // Substituir URLs por links clicáveis
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  processedContent = processedContent.replace(urlRegex, (url) => {
+    // Verificar se parece ser uma URL de imagem
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+    const isImageUrl = imageExtensions.some(ext => url.toLowerCase().includes(ext));
+    
+    if (isImageUrl) {
+      return `<img-url>${url}</img-url>`;
+    }
+    
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">${url}</a>`;
+  });
+  
+  // Processar tags de imagem Markdown ![alt](url)
+  const markdownImageRegex = /!\[(.*?)\]\((.*?)\)/g;
+  processedContent = processedContent.replace(markdownImageRegex, (match, alt, url) => {
+    return `<img-url data-alt="${alt || 'Imagem'}">${url}</img-url>`;
+  });
+  
+  // Processar tags de imagem especiais
+  const parts = processedContent.split(/<img-url.*?>|<\/img-url>/);
+  const imgMatches = processedContent.match(/<img-url.*?>(.*?)<\/img-url>/g) || [];
+  
+  if (imgMatches.length > 0) {
+    return (
+      <div>
+        {parts.map((part, index) => {
+          // Índices pares são texto normal, ímpares são URLs de imagens
+          if (index % 2 === 0) {
+            return part ? <div key={index} dangerouslySetInnerHTML={{ __html: part }} /> : null;
+          } else {
+            const imgMatch = imgMatches[Math.floor(index / 2)];
+            const urlMatch = /<img-url.*?>(.*?)<\/img-url>/.exec(imgMatch);
+            const altMatch = /data-alt="(.*?)"/.exec(imgMatch);
+            
+            if (urlMatch && urlMatch[1]) {
+              const url = urlMatch[1];
+              const alt = altMatch ? altMatch[1] : 'Imagem';
+              
+              // Limpar URLs que possam conter caracteres inválidos
+              const cleanUrl = url.trim()
+                .replace(/[\n\r\t]/g, '')
+                .replace(/&amp;/g, '&')
+                .replace(/\\/g, '/');
+              
+              return (
+                <div key={index} className="my-4 flex flex-col items-center">
+                  <div className="relative w-full max-w-md bg-secondary/20 rounded-lg overflow-hidden shadow-md">
+                    <img 
+                      src={cleanUrl} 
+                      alt={alt} 
+                      className="w-full h-auto object-contain rounded-lg"
+                      style={{ maxHeight: '400px' }}
+                      loading="lazy"
+                      onError={(e) => {
+                        console.error("Erro ao carregar imagem:", cleanUrl);
+                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iIzJhMmEyYSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMThweCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgZmlsbD0iI2ZmZiI+SW1hZ2VtIGluZGlzcG9uw612ZWw8L3RleHQ+PHRleHQgeD0iNTAlIiB5PSI2NSUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNHB4IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiBmaWxsPSIjYWFhIj5FcnJvIGFvIGNhcnJlZ2FyIGltYWdlbTwvdGV4dD48L3N2Zz4=';
+                        e.target.alt = 'Imagem indisponível';
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">{alt}</p>
+                </div>
+              );
+            } else {
+              return null;
+            }
+          }
+        })}
+      </div>
+    );
+  }
+  
+  // Formatar markdown básico: ** para negrito, * para itálico
+  processedContent = processedContent
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/`(.*?)`/g, '<code class="bg-secondary/30 px-1 py-0.5 rounded text-xs">$1</code>');
+  
+  // Substituir quebras de linha por <br>
+  processedContent = processedContent.replace(/\n/g, '<br>');
+  
+  return <div dangerouslySetInnerHTML={{ __html: processedContent }} />;
 }

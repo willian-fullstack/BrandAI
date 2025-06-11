@@ -41,6 +41,31 @@ Corrigimos um problema crítico onde os documentos anexados não estavam sendo r
    - Criação de um sistema robusto de busca recursiva de arquivos
    - Manipulação correta de diferentes formatos de caminhos
 
+### Correção de Problemas de Interface e Renderização
+
+Corrigimos diversos problemas relacionados à interface do usuário e à renderização de componentes:
+
+1. **Correção do Sistema de Temas**:
+   - Implementação robusta de alternância entre temas claro e escuro
+   - Aplicação consistente do tema em todas as páginas
+   - Persistência do tema escolhido entre sessões
+   - Correção de problemas de renderização visual em diferentes componentes
+
+2. **Correção de Renderização de Ícones**:
+   - Resolução do problema de renderização incorreta de ícones de agentes
+   - Implementação de verificação de tipo para ícones (emoji vs componente)
+   - Tratamento apropriado de strings e componentes React
+
+3. **Correção de Erros de API**:
+   - Adição da função filter para AgenteConfig que estava faltando
+   - Tratamento adequado de respostas de erro
+   - Melhor manipulação de estado para evitar inconsistências
+
+4. **Melhorias na Experiência do Usuário**:
+   - Formatação consistente de datas em todo o aplicativo
+   - Feedback visual melhorado para ações do usuário
+   - Correções de navegação entre conversas e agentes
+
 ## Estrutura do Projeto
 
 - **/backend**: API Node.js/Express, controladores e modelos

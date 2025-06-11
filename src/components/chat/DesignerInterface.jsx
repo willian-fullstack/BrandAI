@@ -1,4 +1,5 @@
 import { useState } from "react";
+import PropTypes from 'prop-types';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -149,7 +150,7 @@ export default function DesignerInterface({ onImageGenerated, user, agenteConfig
       
       <CardContent className="space-y-6">
         {/* Seção de prompt */}
-        <div className="space-y-3 border p-4 rounded-lg bg-gray-50">
+        <div className="space-y-3 border p-4 rounded-lg bg-card">
           <Label className="text-md font-medium flex items-center gap-2">
             <MessageSquareIcon className="w-4 h-4" />
             Descrição da imagem
@@ -188,7 +189,7 @@ export default function DesignerInterface({ onImageGenerated, user, agenteConfig
         </div>
         
         {/* Seção de proporção */}
-        <div className="space-y-3 border p-4 rounded-lg bg-gray-50">
+        <div className="space-y-3 border p-4 rounded-lg bg-card">
           <Label className="text-md font-medium flex items-center gap-2">
             <LayoutIcon className="w-4 h-4" />
             Proporção da imagem
@@ -203,14 +204,14 @@ export default function DesignerInterface({ onImageGenerated, user, agenteConfig
               >
                 <span className="text-xl mb-1">{size.icon}</span>
                 <span className="text-sm font-medium">{size.name}</span>
-                <span className="text-xs text-gray-500">{size.value}</span>
+                <span className="text-xs text-muted-foreground">{size.value}</span>
               </Button>
             ))}
           </div>
         </div>
         
         {/* Seção de texto na imagem */}
-        <div className="space-y-3 border p-4 rounded-lg bg-gray-50">
+        <div className="space-y-3 border p-4 rounded-lg bg-card">
           <div className="flex items-center justify-between">
             <Label className="text-md font-medium flex items-center gap-2">
               <TextIcon className="w-4 h-4" />
@@ -224,7 +225,7 @@ export default function DesignerInterface({ onImageGenerated, user, agenteConfig
           </div>
           
           {includeText && (
-            <div className="space-y-3 mt-2 pl-2 border-l-2 border-gray-200">
+            <div className="space-y-3 mt-2 pl-2 border-l-2 border-muted">
               <div className="space-y-2">
                 <Label>Texto a ser incluído</Label>
                 <Input
@@ -232,7 +233,7 @@ export default function DesignerInterface({ onImageGenerated, user, agenteConfig
                   value={textOverlay}
                   onChange={(e) => setTextOverlay(e.target.value)}
                 />
-                <p className="text-xs text-gray-500 italic">
+                <p className="text-xs text-muted-foreground italic">
                   O texto será incluído exatamente como digitado, em português.
                 </p>
               </div>
@@ -274,7 +275,7 @@ export default function DesignerInterface({ onImageGenerated, user, agenteConfig
         </div>
         
         {/* Seção de estilos */}
-        <div className="space-y-3 border p-4 rounded-lg bg-gray-50">
+        <div className="space-y-3 border p-4 rounded-lg bg-card">
           <Label className="text-md font-medium flex items-center gap-2">
             <PaletteIcon className="w-4 h-4" />
             Estilo da imagem (opcional)
@@ -295,7 +296,7 @@ export default function DesignerInterface({ onImageGenerated, user, agenteConfig
         
         {/* Opção de usar documentos de treinamento */}
         {hasDocuments && (
-          <div className="flex items-center justify-between border p-4 rounded-lg bg-gray-50">
+          <div className="flex items-center justify-between border p-4 rounded-lg bg-card">
             <Label htmlFor="use-docs" className="text-md font-medium">
               Utilizar documentos de treinamento ({agenteConfigData?.documentos_treinamento?.length})
             </Label>
@@ -328,7 +329,7 @@ export default function DesignerInterface({ onImageGenerated, user, agenteConfig
         </Button>
         
         {user?.role !== 'admin' && (
-          <p className="text-xs text-gray-500 w-full text-center">
+          <p className="text-xs text-muted-foreground w-full text-center">
             {user?.creditos_restantes > 0 ? 
               `Créditos disponíveis: ${user.creditos_restantes}` : 
               "Sem créditos disponíveis. Faça upgrade do seu plano."}
@@ -338,3 +339,22 @@ export default function DesignerInterface({ onImageGenerated, user, agenteConfig
     </Card>
   );
 }
+
+// Adicionar validação de props
+DesignerInterface.propTypes = {
+  onImageGenerated: PropTypes.func.isRequired,
+  user: PropTypes.shape({
+    role: PropTypes.string,
+    creditos_restantes: PropTypes.number
+  }),
+  agenteConfigData: PropTypes.shape({
+    codigo: PropTypes.string,
+    documentos_treinamento: PropTypes.array
+  })
+};
+
+// Valores padrão para evitar erros quando props estiverem ausentes
+DesignerInterface.defaultProps = {
+  user: { role: 'user', creditos_restantes: 0 },
+  agenteConfigData: { codigo: 'designer', documentos_treinamento: [] }
+};

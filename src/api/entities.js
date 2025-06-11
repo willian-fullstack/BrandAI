@@ -146,6 +146,16 @@ export const AgenteConfig = {
     } catch (error) {
       throw error.response?.data || { message: 'Erro ao excluir documento de treinamento' };
     }
+  },
+  
+  filter: async (filtros = {}) => {
+    try {
+      const response = await api.get('/agente-config', { params: filtros });
+      return response.data || [];
+    } catch (error) {
+      console.error('Erro ao filtrar configurações de agente:', error);
+      return [];
+    }
   }
 };
 

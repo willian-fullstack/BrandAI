@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { User } from "@/api/entities";
 import { Conversa } from "@/api/entities";
 import { Button } from "@/components/ui/button";
@@ -12,15 +12,17 @@ import {
   ArrowLeft,
   Trash2,
   Calendar,
-  Clock
+  Clock,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { agentesConfig } from "@/config/agentes";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export default function Conversas() {
-  const [user, setUser] = useState(null);
+  const [, setUser] = useState(null);
   const [conversas, setConversas] = useState([]);
   const [pesquisa, setPesquisa] = useState("");
   const [loading, setLoading] = useState(true);
@@ -76,32 +78,52 @@ export default function Conversas() {
 
   const formatarData = (dataString) => {
     try {
+      if (!dataString) return "Data indisponível";
+      
       const data = new Date(dataString);
+      if (isNaN(data.getTime())) {
+        return "Data indisponível";
+      }
+      
       return format(data, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
-    } catch (_) {
-      return "Data desconhecida";
+    } catch (error) {
+      console.error("Erro ao formatar data:", error);
+      return "Data indisponível";
     }
   };
 
   const formatarHora = (dataString) => {
     try {
+      if (!dataString) return "";
+      
       const data = new Date(dataString);
+      if (isNaN(data.getTime())) {
+        return "";
+      }
+      
       return format(data, "HH:mm", { locale: ptBR });
-    } catch (_) {
+    } catch (error) {
+      console.error("Erro ao formatar hora:", error);
       return "";
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse flex flex-col items-center gap-4">
+          <div className="w-16 h-16 relative">
+            <div className="absolute inset-0 rounded-full border-t-2 border-primary animate-spin"></div>
+            <div className="absolute inset-3 rounded-full border-t-2 border-primary/70 animate-spin-slow"></div>
+          </div>
+          <span className="text-muted-foreground font-medium">Carregando conversas...</span>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 p-6">
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -110,21 +132,21 @@ export default function Conversas() {
         >
           <div className="flex items-center gap-4 mb-6">
             <Link to={createPageUrl("Dashboard")}>
-              <Button variant="outline" size="icon">
+              <Button variant="ghost" size="icon" className="rounded-full">
                 <ArrowLeft className="w-4 h-4" />
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-3xl font-bold text-foreground">
                 Suas Conversas
               </h1>
-              <p className="text-gray-600">
+              <p className="text-muted-foreground">
                 Histórico completo de conversas com agentes IA
               </p>
             </div>
           </div>
 
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl mb-6">
+          <Card className="mb-6">
             <CardContent className="p-6">
               <div className="flex gap-3">
                 <Input
@@ -134,7 +156,10 @@ export default function Conversas() {
                   onKeyPress={(e) => e.key === 'Enter' && buscarConversas()}
                   className="flex-1"
                 />
-                <Button onClick={buscarConversas}>
+                <Button 
+                  onClick={buscarConversas}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
                   <Search className="w-4 h-4 mr-2" />
                   Buscar
                 </Button>
@@ -142,119 +167,131 @@ export default function Conversas() {
             </CardContent>
           </Card>
 
-          <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+          <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <MessageSquare className="w-6 h-6 text-indigo-600" />
+                  <MessageSquare className="w-6 h-6 text-primary" />
                   Histórico de Conversas
                 </div>
-                <span className="text-sm font-normal text-gray-500">
+                <span className="text-sm font-normal text-muted-foreground">
                   {totalConversas} {totalConversas === 1 ? 'conversa' : 'conversas'} encontradas
                 </span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {conversas.length > 0 ? (
-                <div className="space-y-3">
-                  {conversas.map((conversa) => (
-                    <div
-                      key={conversa.id}
-                      onClick={() => navegarParaChat(conversa.id)}
-                      className="p-4 hover:bg-gray-50 rounded-lg transition-colors cursor-pointer border border-gray-100"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl bg-gradient-to-r ${agentesConfig[conversa.agente_id]?.cor || "from-gray-500 to-gray-600"}`}>
-                            {agentesConfig[conversa.agente_id]?.icon || "🤖"}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 truncate">
-                              {conversa.titulo}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              {agentesConfig[conversa.agente_id]?.nome || "Agente"}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-6">
-                          <div className="text-right text-sm text-gray-500">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" />
-                              <span>{formatarData(conversa.updatedAt || conversa.createdAt)}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
-                              <span>{formatarHora(conversa.updatedAt || conversa.createdAt)}</span>
-                            </div>
-                          </div>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            className="text-gray-400 hover:text-red-600"
-                            onClick={(e) => excluirConversa(conversa.id, e)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  {/* Paginação */}
-                  {totalPaginas > 1 && (
-                    <div className="flex justify-center gap-2 mt-6">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={paginaAtual === 1}
-                        onClick={() => setPaginaAtual(paginaAtual - 1)}
+              <AnimatePresence>
+                {conversas.length > 0 ? (
+                  <div className="space-y-3">
+                    {conversas.map((conversa, index) => (
+                      <motion.div
+                        key={conversa.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        onClick={() => navegarParaChat(conversa.id)}
+                        className="p-4 hover:bg-secondary/50 rounded-lg transition-all duration-300 cursor-pointer border border-border backdrop-blur-sm"
+                        whileHover={{ 
+                          scale: 1.02,
+                          boxShadow: "0 10px 30px -15px rgba(0, 0, 0, 0.2)"
+                        }}
                       >
-                        Anterior
-                      </Button>
-                      
-                      {Array.from({ length: totalPaginas }, (_, i) => i + 1)
-                        .filter(p => p === 1 || p === totalPaginas || (p >= paginaAtual - 1 && p <= paginaAtual + 1))
-                        .map((pagina, index, array) => (
-                          <React.Fragment key={pagina}>
-                            {index > 0 && array[index - 1] !== pagina - 1 && (
-                              <Button variant="ghost" size="sm" disabled>
-                                ...
-                              </Button>
-                            )}
-                            <Button
-                              variant={paginaAtual === pagina ? "default" : "outline"}
-                              size="sm"
-                              onClick={() => setPaginaAtual(pagina)}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl bg-gradient-to-r ${agentesConfig[conversa.agente_id]?.cor || "from-gray-500 to-gray-600"} shadow-lg`}>
+                              {agentesConfig[conversa.agente_id]?.icon || "🤖"}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-foreground truncate">
+                                {conversa.titulo}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {agentesConfig[conversa.agente_id]?.nome || "Agente"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-6">
+                            <div className="text-right text-sm text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                <span>{formatarData(conversa.updatedAt || conversa.createdAt)}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                <span>{formatarHora(conversa.updatedAt || conversa.createdAt)}</span>
+                              </div>
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                              onClick={(e) => excluirConversa(conversa.id, e)}
                             >
-                              {pagina}
+                              <Trash2 className="w-4 h-4" />
                             </Button>
-                          </React.Fragment>
-                        ))}
-                      
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={paginaAtual === totalPaginas}
-                        onClick={() => setPaginaAtual(paginaAtual + 1)}
-                      >
-                        Próxima
-                      </Button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="py-8 text-center"
+                  >
+                    <div className="w-16 h-16 bg-secondary/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <MessageSquare className="w-8 h-8 text-muted-foreground" />
                     </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-16">
-                  <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-xl font-medium text-gray-500 mb-2">Nenhuma conversa encontrada</p>
-                  <p className="text-gray-400 mb-6">
-                    {pesquisa ? 'Tente buscar com outros termos' : 'Comece conversando com os agentes IA'}
-                  </p>
-                  <Link to={createPageUrl("Agentes")}>
-                    <Button>
-                      Iniciar uma conversa
-                    </Button>
-                  </Link>
+                    <h3 className="text-xl font-medium text-foreground mb-2">Nenhuma conversa encontrada</h3>
+                    <p className="text-muted-foreground mb-6">Você ainda não iniciou conversas ou nenhuma corresponde à sua busca.</p>
+                    <Link to={createPageUrl("Agentes")}>
+                      <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                        Iniciar Nova Conversa
+                      </Button>
+                    </Link>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Paginação */}
+              {totalPaginas > 1 && (
+                <div className="flex justify-between items-center mt-8">
+                  <Button
+                    variant="outline"
+                    onClick={() => setPaginaAtual(p => Math.max(1, p - 1))}
+                    disabled={paginaAtual === 1}
+                    className="disabled:opacity-50"
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-2" />
+                    Anterior
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(page => (
+                      <Button
+                        key={page}
+                        variant={paginaAtual === page ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setPaginaAtual(page)}
+                        className={paginaAtual === page 
+                          ? "bg-primary hover:bg-primary/90 text-primary-foreground" 
+                          : ""}
+                      >
+                        {page}
+                      </Button>
+                    ))}
+                  </div>
+                  
+                  <Button
+                    variant="outline"
+                    onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))}
+                    disabled={paginaAtual === totalPaginas}
+                    className="disabled:opacity-50"
+                  >
+                    Próxima
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
                 </div>
               )}
             </CardContent>

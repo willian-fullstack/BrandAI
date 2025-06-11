@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { User } from "@/api/entities";
 import { Indicacao } from "@/api/entities";
 import { Conversa } from "@/api/entities";
@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 import {
   Users,
   DollarSign,
@@ -33,9 +35,10 @@ import {
   KeyRound,
   Brain,
   RefreshCcw,
-  AlertCircle
+  AlertCircle,
+  ArrowLeft
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from 'react-router-dom';
 
 // Importar o agentesConfig do arquivo centralizado
@@ -54,6 +57,7 @@ export default function Admin() {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [modalAgente, setModalAgente] = useState(false);
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [agenteAtual, setAgenteAtual] = useState({
     codigo: '',
     nome: '',
@@ -73,6 +77,7 @@ export default function Admin() {
     sincronizando: false
   });
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     loadData();
@@ -99,6 +104,16 @@ export default function Admin() {
       }, 1000);
     }
   }, [location.search, sincronizacaoInfo.agentesExcedentes]);
+
+  // Adicionar useEffect para detectar mudanças de tema
+  useEffect(() => {
+    const handleThemeChange = (e) => {
+      setTheme(e.detail.theme);
+    };
+    
+    document.addEventListener('themeChanged', handleThemeChange);
+    return () => document.removeEventListener('themeChanged', handleThemeChange);
+  }, []);
 
   const loadData = async () => {
     try {
@@ -147,79 +162,53 @@ export default function Admin() {
         setAgentesConfigs([]); // Inicializa como array vazio para evitar erros no map/filter
       }
 
-      // Tentar carregar configurações de pagamento
+      // Tentar carregar configurações de pagamento, IA e planos
       try {
-        const pagamentoDataResults = await ConfiguracaoPagamento.getAll();
-        if (pagamentoDataResults && pagamentoDataResults.length > 0) {
-          setConfigPagamento(pagamentoDataResults[0]);
-        } else {
-          setConfigPagamento({
-            gateway_mundpay_client_id: "",
-            gateway_mundpay_client_secret: "",
-            gateway_mercadopago_public_key: "",
-            gateway_mercadopago_access_token: "",
-            gateway_mercadopago_webhook_secret: ""
-          });
-        }
-      } catch (error) {
-        console.warn("ConfiguracaoPagamento não encontrado ou erro ao carregar:", error);
-        setConfigPagamento({
-          gateway_mundpay_client_id: "",
-          gateway_mundpay_client_secret: "",
-          gateway_mercadopago_public_key: "",
-          gateway_mercadopago_access_token: "",
-          gateway_mercadopago_webhook_secret: ""
-        });
-      }
+        const [pagamentoDataResults, iaDataResults, planosDataResults] = await Promise.all([
+          ConfiguracaoPagamento.getAll(),
+          ConfiguracaoIA.getAll(),
+          ConfiguracaoPlanos.getAll()
+        ]);
 
-      // Tentar carregar configurações de IA
-      try {
-        const iaDataResults = await ConfiguracaoIA.getAll();
-        if (iaDataResults && iaDataResults.length > 0) {
-          setConfigIA(iaDataResults[0]);
-        } else {
-          setConfigIA({
-            gpt_api_key: "",
-            modelo_preferencial_ia: "gpt-3.5-turbo"
-          });
-        }
-      } catch (error) {
-        console.warn("ConfiguracaoIA não encontrado ou erro ao carregar:", error);
-        setConfigIA({
-          gpt_api_key: "",
-          modelo_preferencial_ia: "gpt-3.5-turbo"
-        });
-      }
+        // Processar configurações de pagamento
+        setConfigPagamento(pagamentoDataResults && pagamentoDataResults.length > 0 
+          ? pagamentoDataResults[0] 
+          : {
+              gateway_mundpay_client_id: "",
+              gateway_mundpay_client_secret: "",
+              gateway_mercadopago_public_key: "",
+              gateway_mercadopago_access_token: "",
+              gateway_mercadopago_webhook_secret: ""
+            }
+        );
 
-      // Tentar carregar configurações de planos
-      try {
-        const planosDataResults = await ConfiguracaoPlanos.getAll();
-        if (planosDataResults && planosDataResults.length > 0) {
-          setConfigPlanos(planosDataResults[0]);
-        } else {
-          setConfigPlanos({
-            plano_basico_preco_mensal: 67,
-            plano_basico_preco_anual: 597,
-            plano_intermediario_preco_mensal: 97,
-            plano_intermediario_preco_anual: 870,
-            plano_premium_preco_mensal: 127,
-            plano_premium_preco_anual: 997
-          });
-        }
+        // Processar configurações de IA
+        setConfigIA(iaDataResults && iaDataResults.length > 0 
+          ? iaDataResults[0] 
+          : {
+              gpt_api_key: "",
+              modelo_preferencial_ia: "gpt-3.5-turbo"
+            }
+        );
+
+        // Processar configurações de planos
+        setConfigPlanos(planosDataResults && planosDataResults.length > 0 
+          ? planosDataResults[0] 
+          : {
+              plano_basico_preco_mensal: 67,
+              plano_basico_preco_anual: 597,
+              plano_intermediario_preco_mensal: 97,
+              plano_intermediario_preco_anual: 870,
+              plano_premium_preco_mensal: 127,
+              plano_premium_preco_anual: 997
+            }
+        );
       } catch (error) {
-        console.warn("ConfiguracaoPlanos não encontrado:", error);
-        setConfigPlanos({
-          plano_basico_preco_mensal: 67,
-          plano_basico_preco_anual: 597,
-          plano_intermediario_preco_mensal: 97,
-          plano_intermediario_preco_anual: 870,
-          plano_premium_preco_mensal: 127,
-          plano_premium_preco_anual: 997
-        });
+        console.warn("Erro ao carregar configurações:", error);
       }
 
     } catch (error) {
-      console.error("Erro ao carregar dados principais:", error);
+      console.error("Erro ao carregar dados:", error);
     } finally {
       setLoading(false);
     }
@@ -616,7 +605,13 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <div className="animate-pulse flex flex-col items-center gap-4">
+          <div className="w-16 h-16 relative">
+            <div className="absolute inset-0 rounded-full border-t-2 border-indigo-500 animate-spin"></div>
+            <div className="absolute inset-3 rounded-full border-t-2 border-purple-500 animate-spin-slow"></div>
+          </div>
+          <span className="text-muted-foreground font-medium">Carregando painel administrativo...</span>
+        </div>
       </div>
     );
   }
@@ -630,21 +625,23 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
   const afiliados = Array.isArray(usuarios) ? usuarios.filter(u => u.eh_afiliado).length : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 p-6">
+    <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Dashboard Administrativo
-          </h1>
-          <p className="text-xl text-gray-600">
-            Gestão completa da plataforma BrandLab
-          </p>
-        </motion.div>
+        <div className="flex items-center gap-4 mb-6">
+          <Link to={createPageUrl("Dashboard")}>
+            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full">
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold">
+              Painel Administrativo
+            </h1>
+            <p className="text-muted-foreground">
+              Gerencie usuários, agentes, configurações e mais
+            </p>
+          </div>
+        </div>
 
         {/* Notificação */}
         {notificacao.tipo && (

@@ -56,10 +56,32 @@ export const testarIntegracao = async (id) => {
 };
 
 // Invocar modelo de linguagem para processar texto
-export const InvokeLLM = async (params) => {
+export const InvokeLLM = async (mensagens, agenteId, documentos = null) => {
   try {
+    console.log('Invocando LLM com:', { mensagens, agenteId, documentos });
+    
+    // Converter o formato das mensagens para o formato esperado pela API
+    let messages = [];
+    
+    if (mensagens && mensagens.length > 0) {
+      // Mapear as mensagens para o formato correto
+      messages = mensagens.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+    }
+    
+    // Preparar os parâmetros para a API
+    const params = {
+      messages: messages,
+      agente_id: agenteId,
+      file_urls: documentos
+    };
+    
+    console.log('Enviando para API:', params);
+    
     const response = await api.post('/integrations/invoke-llm', params);
-    return response.data;
+    return { resposta: response.data };
   } catch (error) {
     console.error('Erro ao invocar LLM:', error);
     throw error;

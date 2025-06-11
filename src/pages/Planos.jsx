@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { User } from "@/api/entities";
 import { ConfiguracaoPlanos } from "@/api/entities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 import { 
   Check, 
   Crown, 
   Zap, 
   Star,
-  Sparkles,
   TrendingUp,
   Gift,
-  ArrowRight,
   LogIn,
-  ShieldCheck
+  ShieldCheck,
+  ArrowLeft
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { isAdmin } from "@/api/base44Client";
@@ -172,183 +172,240 @@ export default function Planos() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse flex flex-col items-center gap-4">
+          <div className="w-16 h-16 relative">
+            <div className="absolute inset-0 rounded-full border-t-2 border-primary animate-spin"></div>
+            <div className="absolute inset-3 rounded-full border-t-2 border-primary/70 animate-spin-slow"></div>
+          </div>
+          <span className="text-muted-foreground font-medium">Carregando planos...</span>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 p-6">
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          className="mb-12"
         >
-          <h1 className="text-5xl font-bold text-gray-900 mb-4">
-            Escolha Seu Plano
-          </h1>
-          
-          {userIsAdmin ? (
-            <div className="bg-green-100 border border-green-200 rounded-lg p-4 mb-6 flex items-center justify-center gap-2">
-              <ShieldCheck className="text-green-600" size={24} />
-              <p className="text-green-800 font-medium">
-                Como administrador, você já tem acesso ilimitado a todos os recursos e agentes da plataforma.
-              </p>
-            </div>
-          ) : (
-            <p className="text-xl text-gray-600 mb-8">
-              Transforme sua marca com o poder da inteligência artificial
-            </p>
-          )}
-          
-          {/* Toggle Anual/Mensal */}
-          <div className="flex items-center justify-center gap-4 mb-8">
-            <span className={`text-lg font-semibold ${!planoAnual ? 'text-gray-900' : 'text-gray-400'}`}>
-              Mensal
-            </span>
-            <button
-              onClick={() => setPlanoAnual(!planoAnual)}
-              className={`relative w-16 h-8 rounded-full transition-colors duration-200 ${
-                planoAnual ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-gray-300'
-              }`}
-            >
-              <div className={`absolute w-6 h-6 bg-white rounded-full top-1 transition-transform duration-200 ${
-                planoAnual ? 'translate-x-9' : 'translate-x-1'
-              }`} />
-            </button>
-            <span className={`text-lg font-semibold ${planoAnual ? 'text-gray-900' : 'text-gray-400'}`}>
-              Anual
-            </span>
-            {planoAnual && (
-              <Badge className="bg-green-100 text-green-800 ml-2">
-                <Gift className="w-3 h-3 mr-1" />
-                Até 4 meses grátis!
-              </Badge>
-            )}
+          <div className="flex items-center gap-4 mb-6">
+            <Link to={createPageUrl("Dashboard")}>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+            </Link>
           </div>
           
-          {/* Mostrar botão de login se não estiver autenticado */}
-          {!user && (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="mb-8"
-            >
-              <Button 
-                onClick={() => navigate('/login')}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 px-8 py-6 text-lg"
-              >
-                <LogIn className="mr-2 h-5 w-5" />
-                Entrar para assinar
-              </Button>
-              <p className="text-sm text-gray-500 mt-2">
-                Não tem uma conta? <a href="#" onClick={(e) => { e.preventDefault(); navigate('/register'); }} className="text-indigo-600 hover:underline">Criar conta</a>
+          <div className="text-center">
+            <h1 className="text-5xl font-bold text-foreground mb-4">
+              Escolha Seu Plano
+            </h1>
+            
+            {userIsAdmin ? (
+              <div className="bg-emerald-900/30 border border-emerald-700/30 rounded-lg p-4 mb-6 flex items-center justify-center gap-2 backdrop-blur-sm">
+                <ShieldCheck className="text-emerald-400" size={24} />
+                <p className="text-emerald-300 font-medium">
+                  Como administrador, você já tem acesso ilimitado a todos os recursos e agentes da plataforma.
+                </p>
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-xl mb-8">
+                Escolha o plano perfeito para acelerar o crescimento da sua marca
               </p>
-            </motion.div>
-          )}
+            )}
+            
+            {/* Toggle Anual/Mensal */}
+            <div className="inline-flex items-center bg-card border border-border p-1 rounded-full backdrop-blur-sm shadow-lg mx-auto mb-12">
+              <Button
+                variant={planoAnual ? "default" : "ghost"}
+                className={planoAnual 
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                  : "text-muted-foreground hover:text-foreground"}
+                onClick={() => setPlanoAnual(true)}
+              >
+                Anual <Badge variant="outline" className="ml-2 bg-primary/20 border-0">Até 2 meses grátis</Badge>
+              </Button>
+              <Button
+                variant={!planoAnual ? "default" : "ghost"}
+                className={!planoAnual 
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                  : "text-muted-foreground hover:text-foreground"}
+                onClick={() => setPlanoAnual(false)}
+              >
+                Mensal
+              </Button>
+            </div>
+          </div>
         </motion.div>
 
-        {/* Cards dos Planos */}
-        <div className="grid lg:grid-cols-3 gap-8 mb-12">
+        {/* Planos */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {planos.map((plano, index) => (
             <motion.div
               key={plano.id}
-              initial={{ opacity: 0, y: 40 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className={`relative ${plano.popular ? 'transform scale-105' : ''}`}
+              transition={{ delay: 0.1 * index }}
+              className={`${plano.popular ? 'md:-mt-4 md:mb-4' : ''}`}
             >
-              {plano.popular && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
-                  <Badge className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-4 py-2">
-                    <Star className="w-4 h-4 mr-1" />
-                    Mais Popular
-                  </Badge>
-                </div>
-              )}
-              
-              <Card className={`h-full bg-white/90 backdrop-blur-sm border-0 shadow-xl hover:shadow-2xl transition-all duration-300 ${
-                plano.popular ? 'ring-2 ring-purple-500 ring-opacity-50' : ''
-              }`}>
-                <CardHeader className="text-center pb-4">
-                  <div className={`w-16 h-16 mx-auto mb-4 bg-gradient-to-r ${plano.cor} rounded-full flex items-center justify-center`}>
-                    {plano.id === 'premium' ? (
-                      <Crown className="w-8 h-8 text-white" />
-                    ) : plano.id === 'intermediario' ? (
-                      <Zap className="w-8 h-8 text-white" />
-                    ) : (
-                      <Sparkles className="w-8 h-8 text-white" />
-                    )}
+              <Card className={`h-full border ${
+                plano.popular 
+                  ? 'border-primary/50 shadow-lg shadow-primary/10'
+                  : 'border-border shadow-md'
+              } overflow-hidden`}>
+                {plano.popular && (
+                  <div className="bg-primary text-primary-foreground text-center py-2 font-medium text-sm">
+                    Recomendado para sua marca
+                  </div>
+                )}
+                
+                <CardHeader className={`pb-4 ${plano.popular ? 'bg-muted/50' : ''}`}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-xl font-bold text-foreground">
+                        {plano.nome}
+                      </CardTitle>
+                      <p className="text-muted-foreground mt-1 font-medium">
+                        {plano.subtitulo}
+                      </p>
+                    </div>
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br ${plano.cor}`}>
+                      {plano.id === 'basico' && <TrendingUp className="w-6 h-6 text-white" />}
+                      {plano.id === 'intermediario' && <Star className="w-6 h-6 text-white" />}
+                      {plano.id === 'premium' && <Crown className="w-6 h-6 text-white" />}
+                    </div>
                   </div>
                   
-                  <CardTitle className="text-2xl font-bold text-gray-900">
-                    {plano.nome}
-                  </CardTitle>
-                  <p className="text-gray-600">{plano.subtitulo}</p>
-                  
                   <div className="mt-6">
-                    <div className="flex items-end justify-center gap-2">
-                      <span className="text-4xl font-bold text-gray-900">
+                    <div className="flex items-end gap-1">
+                      <span className="text-foreground text-3xl font-bold">
                         R${planoAnual ? plano.preco_anual : plano.preco_mensal}
                       </span>
-                      <span className="text-gray-600">
-                        /{planoAnual ? 'ano' : 'mês'}
-                      </span>
+                      {planoAnual ? (
+                        <span className="text-muted-foreground mb-1">/ano</span>
+                      ) : (
+                        <span className="text-muted-foreground mb-1">/mês</span>
+                      )}
                     </div>
                     
-                    {planoAnual && plano.economia > 0 && (
-                      <div className="mt-2">
-                        <Badge className="bg-green-100 text-green-800">
-                          <TrendingUp className="w-3 h-3 mr-1" />
-                          Economize R${plano.economia.toFixed(0)} ({plano.meses_gratis.toFixed(1)} meses grátis!)
+                    {planoAnual && (
+                      <div className="mt-2 flex flex-col">
+                        <span className="text-sm text-muted-foreground">
+                          Equivalente a R${Math.floor(plano.preco_anual / 12)}/mês
+                        </span>
+                        <Badge variant="outline" className="mt-2 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/50 self-start">
+                          <Gift className="w-3 h-3 mr-1" />
+                          {Math.floor(plano.meses_gratis)} meses grátis
                         </Badge>
                       </div>
                     )}
                   </div>
                 </CardHeader>
                 
-                <CardContent className="pt-0">
-                  <div className="border-t border-gray-100 my-4"></div>
-                  
-                  <ul className="space-y-3 mb-8">
-                    {plano.recursos.map((recurso, i) => (
-                      <li key={i} className="flex items-start">
-                        <Check className="w-5 h-5 text-green-500 mr-2 shrink-0 mt-0.5" />
-                        <span className="text-gray-700">{recurso}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  
-                  <Button 
-                    onClick={() => handleEscolherPlano(plano.id)} 
-                    className={`w-full bg-gradient-to-r ${plano.cor} text-white hover:shadow-lg transition-all duration-300 py-6`}
-                  >
-                    {user ? 'Escolher Plano' : 'Assinar Agora'}
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                  
-                  {user && user.plano_atual && user.plano_atual !== plano.id && (
-                    <div className="text-center mt-4">
-                      <Button 
-                        variant="outline" 
-                        onClick={() => handleUpgrade(plano.id)}
-                        className="text-sm"
-                      >
-                        Fazer upgrade
-                      </Button>
+                <CardContent className="pt-4">
+                  <div className="space-y-6">
+                    <Badge variant="outline" className="bg-card border-border px-3 py-1 flex items-center gap-2 self-start">
+                      <Zap className="w-3.5 h-3.5 text-primary" /> 
+                      <span className="text-foreground">{plano.agentes_inclusos} Agentes IA</span>
+                    </Badge>
+                    
+                    <ul className="space-y-3">
+                      {plano.recursos.map((recurso, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-foreground">
+                          <Check className="min-w-5 h-5 text-emerald-500 mt-0.5" />
+                          <span>{recurso}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    
+                    <div className="pt-4">
+                      {!user && (
+                        <Button 
+                          className="w-full h-11 bg-primary hover:bg-primary/90 text-primary-foreground"
+                          onClick={() => handleEscolherPlano(plano.id)}
+                        >
+                          <LogIn className="w-4 h-4 mr-2" />
+                          Criar Conta
+                        </Button>
+                      )}
+                      
+                      {user && user.plano_atual === plano.id && (
+                        <Button 
+                          className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white cursor-default"
+                          disabled
+                        >
+                          <Check className="w-4 h-4 mr-2" />
+                          Seu Plano Atual
+                        </Button>
+                      )}
+                      
+                      {user && user.plano_atual !== plano.id && (
+                        <Button 
+                          className={`w-full h-11 ${
+                            plano.popular 
+                              ? 'bg-gradient-to-r from-primary to-primary-foreground/90 hover:brightness-110 text-primary-foreground'
+                              : 'bg-primary hover:bg-primary/90 text-primary-foreground'
+                          }`}
+                          onClick={() => handleEscolherPlano(plano.id)}
+                        >
+                          {user.plano_atual === 'basico' && plano.id === 'intermediario' && (
+                            <>
+                              <Zap className="w-4 h-4 mr-2" />
+                              Fazer Upgrade
+                            </>
+                          )}
+                          {user.plano_atual === 'basico' && plano.id === 'premium' && (
+                            <>
+                              <Crown className="w-4 h-4 mr-2" />
+                              Fazer Upgrade
+                            </>
+                          )}
+                          {user.plano_atual === 'intermediario' && plano.id === 'premium' && (
+                            <>
+                              <Crown className="w-4 h-4 mr-2" />
+                              Fazer Upgrade
+                            </>
+                          )}
+                          {user.plano_atual === 'intermediario' && plano.id === 'basico' && (
+                            'Mudar para Básico'
+                          )}
+                          {user.plano_atual === 'premium' && (
+                            'Mudar para este Plano'
+                          )}
+                        </Button>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
           ))}
         </div>
         
-        {/* FAQ ou Depoimentos poderiam ser adicionados aqui */}
+        {/* Garantia */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="mt-16 text-center"
+        >
+          <Card className="bg-slate-800/30 border-0 backdrop-blur-sm py-6 px-8 inline-block mx-auto">
+            <CardContent className="flex flex-col md:flex-row items-center gap-4 p-0">
+              <div className="w-16 h-16 rounded-full bg-indigo-600/20 flex items-center justify-center text-indigo-400">
+                <ShieldCheck className="w-8 h-8" />
+              </div>
+              <div className="text-left">
+                <h3 className="text-xl font-semibold text-white">Garantia de 7 dias</h3>
+                <p className="text-slate-400">Se você não ficar satisfeito nos primeiros 7 dias, devolvemos seu dinheiro sem perguntas.</p>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     </div>
   );

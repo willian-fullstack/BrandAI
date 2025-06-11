@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { User } from "@/api/entities";
 import { Indicacao } from "@/api/entities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 import { 
   Users, 
   DollarSign, 
@@ -14,9 +16,10 @@ import {
   Gift,
   Crown,
   CheckCircle,
-  Clock
+  Clock,
+  ArrowLeft
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function Afiliados() {
   const [user, setUser] = useState(null);
@@ -105,14 +108,20 @@ Use meu link e ganhe vantagens especiais: ${linkAfiliado}`;
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse flex flex-col items-center gap-4">
+          <div className="w-16 h-16 relative">
+            <div className="absolute inset-0 rounded-full border-t-2 border-primary animate-spin"></div>
+            <div className="absolute inset-3 rounded-full border-t-2 border-primary/70 animate-spin-slow"></div>
+          </div>
+          <span className="text-muted-foreground font-medium">Carregando programa de afiliados...</span>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 p-6">
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div 
@@ -120,10 +129,18 @@ Use meu link e ganhe vantagens especiais: ${linkAfiliado}`;
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          <div className="flex items-center gap-4 mb-6">
+            <Link to={createPageUrl("Dashboard")}>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+            </Link>
+          </div>
+          
+          <h1 className="text-4xl font-bold text-foreground mb-2">
             Programa de Afiliados 🤝
           </h1>
-          <p className="text-xl text-gray-600">
+          <p className="text-xl text-muted-foreground">
             Ganhe comissões indicando o BrandLab para outros empreendedores
           </p>
         </motion.div>
@@ -135,9 +152,9 @@ Use meu link e ganhe vantagens especiais: ${linkAfiliado}`;
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Card className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-0 shadow-xl">
+            <Card className="bg-gradient-to-br from-indigo-800/80 to-purple-900/80 backdrop-blur-md text-white border-0 shadow-xl rounded-xl overflow-hidden">
               <CardContent className="p-8 text-center">
-                <div className="w-20 h-20 mx-auto mb-6 bg-white/20 rounded-full flex items-center justify-center">
+                <div className="w-20 h-20 mx-auto mb-6 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
                   <Gift className="w-10 h-10 text-white" />
                 </div>
                 <h2 className="text-3xl font-bold mb-4">
@@ -149,15 +166,15 @@ Use meu link e ganhe vantagens especiais: ${linkAfiliado}`;
                 </p>
                 
                 <div className="grid md:grid-cols-3 gap-6 mb-8">
-                  <div className="text-center">
+                  <div className="text-center bg-white/10 rounded-lg p-4 backdrop-blur-sm">
                     <div className="text-3xl font-bold text-white mb-2">30%</div>
                     <p className="text-indigo-100">Comissão por venda</p>
                   </div>
-                  <div className="text-center">
+                  <div className="text-center bg-white/10 rounded-lg p-4 backdrop-blur-sm">
                     <div className="text-3xl font-bold text-white mb-2">R$20-150</div>
                     <p className="text-indigo-100">Por indicação</p>
                   </div>
-                  <div className="text-center">
+                  <div className="text-center bg-white/10 rounded-lg p-4 backdrop-blur-sm">
                     <div className="text-3xl font-bold text-white mb-2">∞</div>
                     <p className="text-indigo-100">Indicações ilimitadas</p>
                   </div>
@@ -165,7 +182,7 @@ Use meu link e ganhe vantagens especiais: ${linkAfiliado}`;
 
                 <Button 
                   onClick={tornarAfiliado}
-                  className="bg-white text-indigo-600 hover:bg-gray-100 text-lg px-8 py-3 rounded-xl font-semibold"
+                  className="bg-white text-indigo-600 hover:bg-white/90 text-lg px-8 py-3 rounded-xl font-semibold"
                 >
                   <Crown className="w-5 h-5 mr-2" />
                   Quero ser Afiliado
@@ -183,12 +200,12 @@ Use meu link e ganhe vantagens especiais: ${linkAfiliado}`;
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
               >
-                <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+                <Card>
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-gray-600 text-sm">Total Indicações</p>
-                        <p className="text-3xl font-bold text-gray-900">{indicacoes.length}</p>
+                        <p className="text-muted-foreground text-sm">Total Indicações</p>
+                        <p className="text-3xl font-bold text-foreground">{indicacoes.length}</p>
                       </div>
                       <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-xl flex items-center justify-center">
                         <Users className="w-6 h-6 text-white" />
@@ -197,18 +214,18 @@ Use meu link e ganhe vantagens especiais: ${linkAfiliado}`;
                   </CardContent>
                 </Card>
               </motion.div>
-
+              
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
               >
-                <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+                <Card>
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-gray-600 text-sm">Comissões Totais</p>
-                        <p className="text-3xl font-bold text-gray-900">R$ {totalComissoes.toFixed(2)}</p>
+                        <p className="text-muted-foreground text-sm">Ganhos Totais</p>
+                        <p className="text-3xl font-bold text-green-500">{`R$ ${totalComissoes.toFixed(2)}`}</p>
                       </div>
                       <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
                         <DollarSign className="w-6 h-6 text-white" />
@@ -217,40 +234,40 @@ Use meu link e ganhe vantagens especiais: ${linkAfiliado}`;
                   </CardContent>
                 </Card>
               </motion.div>
-
+              
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+                <Card>
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-gray-600 text-sm">Comissões Pagas</p>
-                        <p className="text-3xl font-bold text-green-600">R$ {comissoesPagas.toFixed(2)}</p>
+                        <p className="text-muted-foreground text-sm">Comissões Pagas</p>
+                        <p className="text-3xl font-bold text-foreground">{`R$ ${comissoesPagas.toFixed(2)}`}</p>
                       </div>
-                      <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
+                      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
                         <CheckCircle className="w-6 h-6 text-white" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               </motion.div>
-
+              
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
               >
-                <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+                <Card>
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-gray-600 text-sm">Pendentes</p>
-                        <p className="text-3xl font-bold text-yellow-600">R$ {comissoesPendentes.toFixed(2)}</p>
+                        <p className="text-muted-foreground text-sm">Pendente</p>
+                        <p className="text-3xl font-bold text-amber-500">{`R$ ${comissoesPendentes.toFixed(2)}`}</p>
                       </div>
-                      <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-600 rounded-xl flex items-center justify-center">
+                      <div className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
                         <Clock className="w-6 h-6 text-white" />
                       </div>
                     </div>
@@ -258,106 +275,129 @@ Use meu link e ganhe vantagens especiais: ${linkAfiliado}`;
                 </Card>
               </motion.div>
             </div>
-
-            {/* Link de Afiliado */}
+            
+            {/* Link do Afiliado */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
             >
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+              <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <Share2 className="w-6 h-6 text-indigo-600" />
-                    Seu Link de Afiliado
-                  </CardTitle>
+                  <CardTitle className="text-xl">Seu Link de Afiliado</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex gap-3">
-                      <Input
+                <CardContent className="pb-6">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-1">
+                      <Input 
                         value={`${window.location.origin}?ref=${user.codigo_afiliado}`}
                         readOnly
-                        className="flex-1 bg-gray-50"
+                        className="font-mono text-sm"
                       />
-                      <Button 
-                        onClick={copiarLink}
-                        variant="outline"
-                        className="flex-shrink-0"
-                      >
-                        <Copy className="w-4 h-4 mr-2" />
-                        {linkCopiado ? 'Copiado!' : 'Copiar'}
-                      </Button>
-                      <Button 
-                        onClick={compartilharLink}
-                        className="bg-gradient-to-r from-indigo-600 to-purple-600"
-                      >
-                        <Share2 className="w-4 h-4 mr-2" />
-                        Compartilhar
-                      </Button>
                     </div>
-                    
-                    <div className="bg-indigo-50 p-4 rounded-lg">
-                      <p className="text-sm text-indigo-800">
-                        <strong>Seu código:</strong> {user.codigo_afiliado}
-                      </p>
-                      <p className="text-sm text-indigo-600 mt-1">
-                        Ganhe 30% de comissão em cada venda realizada através do seu link!
-                      </p>
-                    </div>
+                    <Button
+                      onClick={copiarLink}
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                    >
+                      {linkCopiado ? (
+                        <>
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Copiado!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4 mr-2" />
+                          Copiar Link
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={compartilharLink}
+                      variant="outline"
+                    >
+                      <Share2 className="w-4 h-4 mr-2" />
+                      Compartilhar
+                    </Button>
                   </div>
+                  <p className="text-sm text-muted-foreground mt-3">
+                    Compartilhe este link. Você recebe 30% de cada venda que vier por ele.
+                  </p>
                 </CardContent>
               </Card>
             </motion.div>
-
-            {/* Histórico de Indicações */}
+            
+            {/* Tabela de Indicações */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
             >
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+              <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <TrendingUp className="w-6 h-6 text-indigo-600" />
-                    Histórico de Indicações
-                  </CardTitle>
+                  <CardTitle className="text-xl">Histórico de Indicações</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {indicacoes.length > 0 ? (
-                    <div className="space-y-4">
-                      {indicacoes.map((indicacao) => (
-                        <div key={indicacao.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                          <div>
-                            <p className="font-semibold text-gray-900">
-                              Plano {indicacao.plano_contratado?.charAt(0).toUpperCase() + indicacao.plano_contratado?.slice(1)}
-                            </p>
-                            <p className="text-sm text-gray-600">
-                              {new Date(indicacao.data_conversao).toLocaleDateString('pt-BR')}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold text-green-600">
-                              R$ {(indicacao.valor_comissao || 0).toFixed(2)}
-                            </p>
-                            <Badge className={
-                              indicacao.status_pagamento === 'pago' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-yellow-100 text-yellow-800'
-                            }>
-                              {indicacao.status_pagamento === 'pago' ? 'Pago' : 'Pendente'}
-                            </Badge>
-                          </div>
-                        </div>
-                      ))}
+                  {indicacoes.length === 0 ? (
+                    <div className="text-center py-12">
+                      <TrendingUp className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-medium text-foreground mb-2">Nenhuma indicação ainda</h3>
+                      <p className="text-muted-foreground">
+                        Compartilhe seu link e comece a ganhar comissões!
+                      </p>
                     </div>
                   ) : (
-                    <div className="text-center py-8">
-                      <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">Nenhuma indicação ainda</p>
-                      <p className="text-sm text-gray-400">
-                        Compartilhe seu link para começar a ganhar comissões!
-                      </p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-border">
+                            <th className="text-left py-3 text-muted-foreground font-medium">Cliente</th>
+                            <th className="text-left py-3 text-muted-foreground font-medium">Plano</th>
+                            <th className="text-left py-3 text-muted-foreground font-medium">Data</th>
+                            <th className="text-right py-3 text-muted-foreground font-medium">Valor</th>
+                            <th className="text-right py-3 text-muted-foreground font-medium">Comissão</th>
+                            <th className="text-center py-3 text-muted-foreground font-medium">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {indicacoes.map((indicacao, index) => (
+                            <tr 
+                              key={indicacao.id || index} 
+                              className="border-b border-border hover:bg-muted/50 transition-colors"
+                            >
+                              <td className="py-3 text-foreground">
+                                {indicacao.usuario_nome || 'Anônimo'}
+                              </td>
+                              <td className="py-3">
+                                <Badge variant="outline" className="bg-card border-border">
+                                  {indicacao.plano_adquirido === 'premium' && 'Premium'}
+                                  {indicacao.plano_adquirido === 'intermediario' && 'Intermediário'}
+                                  {indicacao.plano_adquirido === 'basico' && 'Básico'}
+                                </Badge>
+                              </td>
+                              <td className="py-3 text-muted-foreground">
+                                {new Date(indicacao.data_compra).toLocaleDateString('pt-BR')}
+                              </td>
+                              <td className="py-3 text-right text-foreground font-medium">
+                                R$ {indicacao.valor_venda?.toFixed(2) || '0.00'}
+                              </td>
+                              <td className="py-3 text-right text-green-500 font-bold">
+                                R$ {indicacao.valor_comissao?.toFixed(2) || '0.00'}
+                              </td>
+                              <td className="py-3 text-center">
+                                {indicacao.status_pagamento === 'pago' ? (
+                                  <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-0">
+                                    Pago
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-amber-500 hover:bg-amber-600 text-white border-0">
+                                    Pendente
+                                  </Badge>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </CardContent>

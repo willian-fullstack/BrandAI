@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutGrid,
@@ -11,12 +11,20 @@ import {
   X,
   ChevronDown,
   User,
+  MessageSquare,
+  Search
 } from 'lucide-react';
 import { logout, getCurrentUser, isAdmin } from '../api/base44Client';
+import { motion } from 'framer-motion';
+import NotificationsPanel, { NotificationIcon } from '@/components/ui/notifications-panel';
+import ThemeToggle from '@/components/ui/theme-toggle';
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -35,11 +43,38 @@ export default function Layout() {
     navigate('/login');
   };
 
+  // Detectar mudanças de tema
+  useEffect(() => {
+    const handleThemeChange = (e) => {
+      setTheme(e.detail.theme);
+    };
+    
+    document.addEventListener('themeChanged', handleThemeChange);
+    return () => document.removeEventListener('themeChanged', handleThemeChange);
+  }, []);
+
+  // Fechar menus quando clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuOpen && !event.target.closest('.user-menu-container')) {
+        setUserMenuOpen(false);
+      }
+      if (notificationsOpen && !event.target.closest('.notifications-container')) {
+        setNotificationsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [userMenuOpen, notificationsOpen]);
+
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar para mobile (aberta sob demanda) */}
+    <div className="flex h-screen bg-background text-foreground">
+      {/* Overlay para mobile */}
       <div
-        className={`fixed inset-0 z-20 bg-black bg-opacity-50 transition-opacity lg:hidden ${
+        className={`fixed inset-0 z-20 bg-black/80 backdrop-blur-sm transition-opacity lg:hidden ${
           sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         onClick={() => setSidebarOpen(false)}
@@ -47,78 +82,108 @@ export default function Layout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-30 w-64 h-full bg-white border-r border-gray-200 transition-transform lg:translate-x-0 lg:static lg:z-auto ${
+        className={`fixed top-0 left-0 z-30 w-64 h-full glass transition-transform lg:translate-x-0 lg:static lg:z-auto ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between px-6 py-5 border-b border-border">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-md flex items-center justify-center">
-                <span className="text-white font-bold text-sm">B44</span>
+              <div className="w-8 h-8 bg-gradient-purple rounded-md flex items-center justify-center">
+                <span className="text-white font-bold text-sm">B</span>
               </div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                BrandLab
+              <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+                BrandAI
               </h1>
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="text-gray-500 hover:text-gray-700 lg:hidden"
+              className="text-muted-foreground hover:text-foreground lg:hidden"
             >
               <X size={20} />
             </button>
           </div>
+          
+          <div className="px-4 py-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Buscar..."
+                className="w-full bg-secondary rounded-lg pl-9 pr-4 py-2 text-sm border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+          
           <nav className="flex-1 overflow-y-auto py-4 px-3">
-            <ul className="space-y-1">
+            <div className="mb-2 px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Menu Principal
+            </div>
+            <ul className="space-y-1.5">
               <li>
                 <Link
                   to="/"
-                  className={`flex items-center px-3 py-2.5 rounded-md ${
+                  className={`flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 ${
                     isActive('/') 
-                      ? 'bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700' 
-                      : 'text-gray-700 hover:bg-gray-100'
+                      ? 'bg-primary/10 text-primary' 
+                      : 'text-foreground hover:bg-secondary'
                   }`}
                 >
-                  <LayoutGrid size={20} className={`${isActive('/') ? 'text-indigo-700' : 'text-gray-500'} mr-3`} />
+                  <LayoutGrid size={18} className="mr-3" />
                   Dashboard
                 </Link>
               </li>
               <li>
                 <Link
-                  to="/agentes"
-                  className={`flex items-center px-3 py-2.5 rounded-md ${
-                    isActive('/agentes')
-                      ? 'bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700' 
-                      : 'text-gray-700 hover:bg-gray-100'
+                  to="/conversas"
+                  className={`flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                    isActive('/conversas')
+                      ? 'bg-primary/10 text-primary' 
+                      : 'text-foreground hover:bg-secondary'
                   }`}
                 >
-                  <Users size={20} className={`${isActive('/agentes') ? 'text-indigo-700' : 'text-gray-500'} mr-3`} />
+                  <MessageSquare size={18} className="mr-3" />
+                  Conversas
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/agentes"
+                  className={`flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 ${
+                    isActive('/agentes')
+                      ? 'bg-primary/10 text-primary' 
+                      : 'text-foreground hover:bg-secondary'
+                  }`}
+                >
+                  <Users size={18} className="mr-3" />
                   Agentes
                 </Link>
               </li>
               <li>
                 <Link
                   to="/planos"
-                  className={`flex items-center px-3 py-2.5 rounded-md ${
+                  className={`flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 ${
                     isActive('/planos')
-                      ? 'bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700' 
-                      : 'text-gray-700 hover:bg-gray-100'
+                      ? 'bg-primary/10 text-primary' 
+                      : 'text-foreground hover:bg-secondary'
                   }`}
                 >
-                  <CreditCard size={20} className={`${isActive('/planos') ? 'text-indigo-700' : 'text-gray-500'} mr-3`} />
+                  <CreditCard size={18} className="mr-3" />
                   Planos
                 </Link>
               </li>
               <li>
                 <Link
                   to="/afiliados"
-                  className={`flex items-center px-3 py-2.5 rounded-md ${
+                  className={`flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 ${
                     isActive('/afiliados')
-                      ? 'bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700' 
-                      : 'text-gray-700 hover:bg-gray-100'
+                      ? 'bg-primary/10 text-primary' 
+                      : 'text-foreground hover:bg-secondary'
                   }`}
                 >
-                  <UserPlus size={20} className={`${isActive('/afiliados') ? 'text-indigo-700' : 'text-gray-500'} mr-3`} />
+                  <UserPlus size={18} className="mr-3" />
                   Afiliados
                 </Link>
               </li>
@@ -128,55 +193,67 @@ export default function Layout() {
                 <li>
                   <Link
                     to="/admin"
-                    className={`flex items-center px-3 py-2.5 rounded-md ${
+                    className={`flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 ${
                       isActive('/admin')
-                        ? 'bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700' 
-                        : 'text-gray-700 hover:bg-gray-100'
+                        ? 'bg-primary/10 text-primary' 
+                        : 'text-foreground hover:bg-secondary'
                     }`}
                   >
-                    <Settings size={20} className={`${isActive('/admin') ? 'text-indigo-700' : 'text-gray-500'} mr-3`} />
+                    <Settings size={18} className="mr-3" />
                     Administração
                   </Link>
                 </li>
               )}
             </ul>
           </nav>
-          <div className="p-4 border-t border-gray-200">
-            <div className="relative">
+          
+          <div className="p-4 border-t border-border">
+            <div className="relative user-menu-container">
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100 focus:outline-none"
+                className="flex items-center w-full px-3 py-2 rounded-lg hover:bg-secondary transition-colors duration-200"
               >
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 flex items-center justify-center text-white">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-purple flex items-center justify-center text-white">
                   {userData?.nome?.charAt(0) || "U"}
                 </div>
                 <div className="ml-3 text-left">
-                  <p className="text-sm font-medium text-gray-800 truncate">
+                  <p className="text-sm font-medium truncate">
                     {userData?.nome || "Usuário"}
                   </p>
-                  <p className="text-xs text-gray-500 truncate">
+                  <p className="text-xs text-muted-foreground truncate">
                     {userData?.email || ""}
                   </p>
                 </div>
-                <ChevronDown size={16} className="ml-auto text-gray-500" />
+                <ChevronDown size={16} className="ml-auto text-muted-foreground" />
               </button>
+              
               {userMenuOpen && (
-                <div className="absolute bottom-full mb-2 left-0 w-full bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute bottom-full mb-2 left-0 w-full glass-card rounded-lg shadow-lg border border-border py-1 z-50"
+                >
                   <a
                     href="#"
-                    className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    className="flex items-center px-4 py-2 text-sm hover:bg-secondary transition-colors"
                   >
-                    <User size={16} className="mr-2 text-gray-500" />
+                    <User size={16} className="mr-2 text-muted-foreground" />
                     Perfil
                   </a>
+                  <div className="flex items-center w-full text-left px-4 py-2 text-sm hover:bg-secondary transition-colors">
+                    <ThemeToggle className="mr-2 p-0 h-auto" />
+                    {theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
+                  </div>
                   <button
                     onClick={handleLogout}
-                    className="flex items-center w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                    className="flex items-center w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-secondary transition-colors"
                   >
                     <LogOut size={16} className="mr-2" />
                     Sair
                   </button>
-                </div>
+                </motion.div>
               )}
             </div>
           </div>
@@ -185,26 +262,33 @@ export default function Layout() {
 
       {/* Conteúdo principal */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Cabeçalho para mobile */}
-        <header className="bg-white border-b border-gray-200 p-4 flex items-center justify-between lg:hidden">
+        {/* Cabeçalho */}
+        <header className="flex h-16 items-center px-6 border-b border-border bg-card/50 backdrop-blur-sm">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="text-gray-500 hover:text-gray-700 focus:outline-none"
+            className="mr-4 text-muted-foreground hover:text-foreground lg:hidden"
           >
-            <Menu size={24} />
+            <Menu size={20} />
           </button>
-          <div className="flex items-center space-x-2">
-            <div className="w-6 h-6 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-md flex items-center justify-center">
-              <span className="text-white font-bold text-xs">B44</span>
+          
+          <div className="ml-auto flex items-center space-x-4">
+            {/* Botão de tema */}
+            <ThemeToggle />
+
+            {/* Notificações */}
+            <div className="relative notifications-container">
+              <NotificationIcon onClick={() => setNotificationsOpen(!notificationsOpen)} />
+              
+              <NotificationsPanel 
+                isOpen={notificationsOpen} 
+                onClose={() => setNotificationsOpen(false)} 
+              />
             </div>
-            <h1 className="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              BrandLab
-            </h1>
           </div>
         </header>
 
         {/* Área de conteúdo */}
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-4">
+        <main className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>
       </div>
