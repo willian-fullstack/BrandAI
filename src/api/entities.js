@@ -2,9 +2,15 @@ import api from './base44Client';
 
 // Funções para Conversa
 export const Conversa = {
-  getAll: async () => {
+  getAll: async (page = 1, limit = 20, search = '') => {
     try {
-      const response = await api.get('/conversas');
+      const response = await api.get('/conversas', { 
+        params: { 
+          page,
+          limit,
+          search
+        } 
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: 'Erro ao buscar conversas' };

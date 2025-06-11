@@ -316,10 +316,17 @@ export default function Dashboard() {
             >
               <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-3">
-                    <TrendingUp className="w-6 h-6 text-indigo-600" />
-                    Conversas Recentes
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-3">
+                      <TrendingUp className="w-6 h-6 text-indigo-600" />
+                      Conversas Recentes
+                    </CardTitle>
+                    <Link to={createPageUrl("Conversas")}>
+                      <Button variant="outline" size="sm" className="text-xs">
+                        Ver todas
+                      </Button>
+                    </Link>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   {conversas.length > 0 ? (
@@ -345,6 +352,13 @@ export default function Dashboard() {
                           </div>
                         </div>
                       ))}
+                      <div className="pt-2 text-center">
+                        <Link to={createPageUrl("Conversas")}>
+                          <Button variant="ghost" size="sm" className="text-indigo-600 hover:text-indigo-800 text-sm w-full">
+                            Ver todas as {conversas.length > 5 ? 'outras' : ''} conversas
+                          </Button>
+                        </Link>
+                      </div>
                     </div>
                   ) : (
                     <div className="text-center py-8">

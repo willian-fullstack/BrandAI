@@ -6,6 +6,7 @@ import Chat from './Chat';
 import Agentes from './Agentes';
 import Planos from './Planos';
 import Afiliados from './Afiliados';
+import Conversas from './Conversas';
 import Admin from './Admin';
 import Login from './Login';
 import Register from './Register';
@@ -45,6 +46,7 @@ const AppRouter = () => {
           <Route path="agentes" element={<Agentes />} />
           <Route path="planos" element={<Planos />} />
           <Route path="afiliados" element={<Afiliados />} />
+          <Route path="conversas" element={<Conversas />} />
           <Route path="admin" element={<AdminRoute><Admin /></AdminRoute>} />
         </Route>
       </Routes>

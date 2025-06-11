@@ -587,19 +587,32 @@ Precisa de alguma modificação ou outra imagem?`,
                   }`}>
                     <div className="whitespace-pre-wrap leading-relaxed">
                       {/* Renderizar markdown simples para imagens */}
-                      {mensagem.conteudo.includes('![') ? (
+                      {mensagem.conteudo && mensagem.conteudo.includes('![') ? (
                         <div>
                           {mensagem.conteudo.split('\n').map((linha, i) => {
                             if (linha.includes('![') && linha.includes('](')) {
                               const match = linha.match(/!\[([^\]]*)\]\(([^)]+)\)/);
                               if (match) {
+                                // Verificar se a URL da imagem é relativa ou absoluta
+                                let imageUrl = match[2];
+                                if (imageUrl.startsWith('/') && !imageUrl.startsWith('//')) {
+                                  // URL relativa - adicionar base URL do backend
+                                  const baseUrl = import.meta.env.VITE_API_URL.replace('/api', '');
+                                  imageUrl = `${baseUrl}${imageUrl}`;
+                                }
+                                
                                 return (
                                   <div key={i} className="my-4">
                                     <img 
-                                      src={match[2]} 
+                                      src={imageUrl} 
                                       alt={match[1]} 
                                       className="max-w-full h-auto rounded-lg shadow-lg mx-auto"
                                       style={{ maxHeight: '400px' }}
+                                      onError={(e) => {
+                                        console.error('Erro ao carregar imagem:', imageUrl);
+                                        e.target.onerror = null;
+                                        e.target.src = 'https://placehold.co/600x400?text=Imagem+não+encontrada';
+                                      }}
                                     />
                                   </div>
                                 );
@@ -609,7 +622,7 @@ Precisa de alguma modificação ou outra imagem?`,
                           })}
                         </div>
                       ) : (
-                        mensagem.conteudo
+                        mensagem.conteudo || ''
                       )}
                     </div>
                   </div>

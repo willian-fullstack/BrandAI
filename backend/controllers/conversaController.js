@@ -111,13 +111,25 @@ export const criarConversa = async (req, res) => {
 // @access  Privado
 export const getConversas = async (req, res) => {
   try {
-    const { limit = 20, page = 1, all = false } = req.query;
+    const { limit = 20, page = 1, all = false, search = '' } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     // Filtro de busca: admin pode ver todas as conversas se all=true
-    const filtro = req.user.role === 'admin' && all === 'true' 
+    let filtro = req.user.role === 'admin' && all === 'true' 
       ? {} 
       : { usuario_id: req.user._id };
+      
+    // Adicionar filtro de pesquisa por título se fornecido
+    if (search && search.trim() !== '') {
+      filtro = {
+        ...filtro,
+        $or: [
+          { titulo: { $regex: search, $options: 'i' } },
+          // Opcionalmente, buscar também nas mensagens
+          { 'mensagens.conteudo': { $regex: search, $options: 'i' } }
+        ]
+      };
+    }
 
     const conversas = await Conversa.find(filtro)
       .sort({ updatedAt: -1 })
