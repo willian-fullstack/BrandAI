@@ -71,8 +71,8 @@ export default function Register() {
         const loginResponse = await login(formData.email, formData.password);
         console.log("Login automático bem-sucedido:", loginResponse);
         
-        // Redirecionar para a página inicial
-        navigate('/');
+        // Redirecionar para a rota /app após registro e login bem-sucedido
+        navigate('/app');
       } catch (loginError) {
         console.error("Erro no login automático após registro:", loginError);
         setError("Registro realizado com sucesso, mas houve um problema no login automático. Por favor, vá para a página de login.");

@@ -463,12 +463,17 @@ export const invokeLLM = async (req, res) => {
   };
 
   try {
-    const { prompt, file_urls, agente_id } = req.body;
+    const { prompt, messages: requestMessages, agente_id, file_urls } = req.body;
 
     // Validar se o prompt foi fornecido
     if (!prompt) {
+      console.error('Erro: Prompt não fornecido na requisição');
       return res.status(400).json({ message: 'O prompt é obrigatório' });
     }
+
+    console.log('Prompt recebido:', prompt.substring(0, 100) + '...');
+    console.log('Mensagens recebidas:', requestMessages ? requestMessages.length : 0);
+    console.log('Agente ID:', agente_id);
 
     // Verificar se o usuário tem créditos disponíveis (exceto admin)
     if (req.user.role !== 'admin') {
@@ -594,12 +599,61 @@ export const invokeLLM = async (req, res) => {
     const axios = await import('axios');
     
     // Preparar mensagens para a API da OpenAI
-    const messages = [
-      { 
+    const messages = [];
+    
+    // Adicionar instruções do sistema do agente, se disponíveis
+    if (agente_id) {
+      try {
+        const AgenteConfig = mongoose.model('AgenteConfig');
+        const agente = await AgenteConfig.findOne({ codigo: agente_id });
+        
+        if (agente) {
+          // Usar instruções do sistema do agente
+          let instrucaoSistema = agente.instrucoes_sistema || 'Você é um assistente útil e especializado.';
+          
+          // Adicionar descrição do agente se disponível
+          if (agente.descricao) {
+            instrucaoSistema = `${instrucaoSistema}\n\nVocê é especializado em: ${agente.descricao}`;
+          }
+          
+          // Adicionar especialidades se disponíveis
+          if (agente.especialidades && agente.especialidades.length > 0) {
+            instrucaoSistema = `${instrucaoSistema}\n\nSuas especialidades são: ${agente.especialidades.join(', ')}`;
+          }
+          
+          // Adicionar instruções para usar documentos se disponíveis
+          instrucaoSistema = `${instrucaoSistema}\n\nResponda utilizando as informações dos documentos fornecidos quando disponíveis.`;
+          
+          // Adicionar a mensagem de sistema com as instruções personalizadas
+          messages.push({ 
+            role: 'system', 
+            content: instrucaoSistema
+          });
+          
+          console.log(`Usando instruções do sistema do agente: ${instrucaoSistema.substring(0, 100)}...`);
+        } else {
+          // Fallback para instruções padrão
+          messages.push({ 
+            role: 'system', 
+            content: 'Você é um assistente útil e especializado. Responda utilizando as informações dos documentos fornecidos quando disponíveis.' 
+          });
+          console.log('Agente não encontrado, usando instruções padrão');
+        }
+      } catch (erro) {
+        console.error('Erro ao buscar instruções do agente:', erro);
+        // Fallback para instruções padrão em caso de erro
+        messages.push({ 
+          role: 'system', 
+          content: 'Você é um assistente útil e especializado. Responda utilizando as informações dos documentos fornecidos quando disponíveis.' 
+        });
+      }
+    } else {
+      // Sem agente_id, usar instruções padrão
+      messages.push({ 
         role: 'system', 
         content: 'Você é um assistente útil e especializado. Responda utilizando as informações dos documentos fornecidos quando disponíveis.' 
-      }
-    ];
+      });
+    }
     
     // Se houver documentos processados, adicionar o conteúdo como contexto
     if (documentosProcessados.length > 0) {
@@ -1176,5 +1230,276 @@ export const getUserApiUsage = async (req, res) => {
   } catch (error) {
     console.error('Erro ao obter uso de API por usuário:', error);
     res.status(500).json({ message: 'Erro ao obter uso de API por usuário' });
+  }
+};
+
+// @desc    Conversar com agente (endpoint alternativo)
+// @route   POST /api/integrations/conversar-com-agente
+// @access  Privado
+export const conversarComAgente = async (req, res) => {
+  const startTime = Date.now();
+  let usageData = {
+    api_name: 'openai',
+    endpoint: '/v1/chat/completions',
+    user_id: req.user ? req.user._id : null,
+    success: false,
+    tokens_input: 0,
+    tokens_output: 0,
+    response_time_ms: 0
+  };
+
+  try {
+    const { mensagens, agente_id, documentos } = req.body;
+
+    // Validar dados de entrada
+    if (!mensagens || !Array.isArray(mensagens) || mensagens.length === 0) {
+      return res.status(400).json({ message: 'Mensagens são obrigatórias e devem ser um array não vazio' });
+    }
+
+    if (!agente_id) {
+      return res.status(400).json({ message: 'ID do agente é obrigatório' });
+    }
+
+    // Extrair a última mensagem do usuário como prompt
+    const ultimaMensagemUsuario = [...mensagens].filter(msg => msg.role === 'user').pop();
+    
+    if (!ultimaMensagemUsuario) {
+      return res.status(400).json({ message: 'Não foi possível encontrar uma mensagem do usuário' });
+    }
+    
+    const prompt = ultimaMensagemUsuario.content;
+    
+    console.log('Usando endpoint alternativo para conversar com agente');
+    console.log('Agente ID:', agente_id);
+    console.log('Total de mensagens:', mensagens.length);
+    console.log('Prompt extraído:', prompt.substring(0, 100) + '...');
+
+    // Verificar se o usuário tem créditos disponíveis (exceto admin)
+    if (req.user.role !== 'admin') {
+      const user = await User.findById(req.user._id);
+      
+      if (user.creditos_restantes <= 0) {
+        return res.status(403).json({ 
+          message: 'Você não tem créditos suficientes para usar esta funcionalidade. Faça upgrade do seu plano.' 
+        });
+      }
+      
+      // Descontar um crédito
+      user.creditos_restantes -= 1;
+      await user.save();
+    }
+    
+    // Processar os documentos anexados
+    let documentosProcessados = [];
+    let conteudoDocumentos = '';
+    
+    // Abordagem 1: Usar os documentos enviados diretamente
+    if (documentos && Array.isArray(documentos) && documentos.length > 0) {
+      console.log(`Documentos anexados diretamente: ${documentos.length}`);
+      console.log('Documentos:', JSON.stringify(documentos));
+    } else {
+      console.log(`Nenhum documento enviado diretamente`);
+    }
+    
+    // Abordagem 2: Buscar documentos diretamente do banco de dados pelo agente_id
+    if (agente_id) {
+      try {
+        const AgenteConfig = mongoose.model('AgenteConfig');
+        const agente = await AgenteConfig.findOne({ codigo: agente_id });
+        
+        if (agente && agente.documentos_treinamento && agente.documentos_treinamento.length > 0) {
+          console.log(`Agente ${agente_id} tem ${agente.documentos_treinamento.length} documentos cadastrados:`);
+          
+          // Mostrar os documentos encontrados
+          agente.documentos_treinamento.forEach((doc, index) => {
+            console.log(`Documento ${index + 1}: ${doc.nome} (${doc.caminho})`);
+          });
+          
+          // Processar cada documento encontrado no banco de dados
+          for (const documento of agente.documentos_treinamento) {
+            try {
+              console.log(`Processando documento: ${documento.nome} (${documento.caminho})`);
+              
+              // Usar nosso utilitário para encontrar o arquivo
+              const fileResult = findAndReadFile(documento.caminho);
+              
+              if (fileResult.found) {
+                documentosProcessados.push(documento.nome);
+                console.log(`Documento lido com sucesso: ${documento.nome} (${fileResult.content.length} caracteres)`);
+                conteudoDocumentos += `\n\n--- DOCUMENTO: ${documento.nome} ---\n${fileResult.content}\n--- FIM DO DOCUMENTO ---\n`;
+              } else {
+                // Tentar ler o arquivo diretamente do sistema de arquivos
+                try {
+                  const filePath = path.join(__dirname, '..', documento.caminho);
+                  console.log(`Tentando ler diretamente do caminho: ${filePath}`);
+                  
+                  if (fs.existsSync(filePath)) {
+                    const conteudo = fs.readFileSync(filePath, 'utf8');
+                    documentosProcessados.push(documento.nome);
+                    console.log(`Documento lido diretamente: ${documento.nome} (${conteudo.length} caracteres)`);
+                    conteudoDocumentos += `\n\n--- DOCUMENTO: ${documento.nome} ---\n${conteudo}\n--- FIM DO DOCUMENTO ---\n`;
+                  } else {
+                    console.log(`Arquivo não encontrado no caminho: ${filePath}`);
+                    
+                    // Buscar em uma lista de caminhos possíveis
+                    const possiblePaths = [
+                      path.join(__dirname, '..', 'uploads', 'training', agente_id, documento.nome),
+                      path.join(__dirname, '..', 'uploads', 'training', documento.nome),
+                      path.join(__dirname, '..', 'uploads', documento.nome),
+                      path.join(__dirname, '..', documento.caminho.replace(/^\//, ''))
+                    ];
+                    
+                    let encontrado = false;
+                    for (const possiblePath of possiblePaths) {
+                      console.log(`Tentando caminho alternativo: ${possiblePath}`);
+                      if (fs.existsSync(possiblePath)) {
+                        const conteudo = fs.readFileSync(possiblePath, 'utf8');
+                        documentosProcessados.push(documento.nome);
+                        console.log(`Documento encontrado em caminho alternativo: ${possiblePath} (${conteudo.length} caracteres)`);
+                        conteudoDocumentos += `\n\n--- DOCUMENTO: ${documento.nome} ---\n${conteudo}\n--- FIM DO DOCUMENTO ---\n`;
+                        encontrado = true;
+                        break;
+                      }
+                    }
+                    
+                    if (!encontrado) {
+                      console.log(`Não foi possível encontrar o arquivo: ${documento.nome} em nenhum dos caminhos testados`);
+                    }
+                  }
+                } catch (erro) {
+                  console.error(`Erro ao ler arquivo ${documento.nome}:`, erro);
+                }
+              }
+            } catch (erro) {
+              console.error(`Erro ao processar documento ${documento.nome}:`, erro);
+            }
+          }
+        } else {
+          console.log(`Agente ${agente_id} não encontrado ou não tem documentos cadastrados`);
+        }
+      } catch (erro) {
+        console.error('Erro ao buscar informações do agente:', erro);
+      }
+    }
+    
+    console.log(`Total de documentos processados: ${documentosProcessados.length}`);
+    if (documentosProcessados.length > 0) {
+      console.log('Documentos processados:', documentosProcessados.join(', '));
+    } else {
+      console.log('Nenhum documento foi processado com sucesso');
+    }
+    
+    // Fazer chamada para a API da OpenAI
+    const axios = await import('axios');
+    
+    // Preparar mensagens para a API da OpenAI
+    let openaiMessages = mensagens;
+    
+    // Verificar se devemos adicionar instruções do sistema do agente
+    if (agente_id) {
+      try {
+        const AgenteConfig = mongoose.model('AgenteConfig');
+        const agente = await AgenteConfig.findOne({ codigo: agente_id });
+        
+        if (agente) {
+          // Usar instruções do sistema do agente
+          let instrucaoSistema = agente.instrucoes_sistema || 'Você é um assistente útil e especializado.';
+          
+          // Adicionar descrição do agente se disponível
+          if (agente.descricao) {
+            instrucaoSistema = `${instrucaoSistema}\n\nVocê é especializado em: ${agente.descricao}`;
+          }
+          
+          // Adicionar especialidades se disponíveis
+          if (agente.especialidades && agente.especialidades.length > 0) {
+            instrucaoSistema = `${instrucaoSistema}\n\nSuas especialidades são: ${agente.especialidades.join(', ')}`;
+          }
+          
+          // Adicionar instruções para usar documentos se disponíveis
+          instrucaoSistema = `${instrucaoSistema}\n\nResponda utilizando as informações dos documentos fornecidos quando disponíveis.`;
+          
+          // Verificar se já existe uma mensagem de sistema e substituí-la
+          const temMensagemSistema = openaiMessages.some(msg => msg.role === 'system');
+          
+          if (temMensagemSistema) {
+            // Substituir a primeira mensagem de sistema encontrada
+            openaiMessages = openaiMessages.map(msg => 
+              msg.role === 'system' ? { ...msg, content: instrucaoSistema } : msg
+            );
+          } else {
+            // Adicionar no início se não existir
+            openaiMessages.unshift({
+              role: 'system',
+              content: instrucaoSistema
+            });
+          }
+          
+          console.log(`Usando instruções do sistema do agente: ${instrucaoSistema.substring(0, 100)}...`);
+        }
+      } catch (erro) {
+        console.error('Erro ao buscar instruções do agente:', erro);
+      }
+    }
+    
+    // Se houver documentos processados, adicionar o conteúdo como contexto
+    if (documentosProcessados.length > 0) {
+      openaiMessages.unshift({
+        role: 'system',
+        content: `Documentos de referência disponíveis: ${documentosProcessados.join(', ')}\n\nConteúdo dos documentos:${conteudoDocumentos}`
+      });
+    }
+    
+    // Estimar tokens de entrada
+    const inputText = openaiMessages.map(m => m.content).join(' ');
+    usageData.tokens_input = apiUsageTracker.estimateTokens(inputText);
+    
+    // Obter a chave da API usando o gerenciador
+    const apiKey = await apiKeyManager.getApiKey('OPENAI_API_KEY');
+    
+    if (!apiKey) {
+      console.error('OPENAI_API_KEY não encontrada no ambiente');
+      return res.status(500).json({ message: 'Configuração da API OpenAI não encontrada' });
+    }
+    
+    const response = await axios.default.post(
+      'https://api.openai.com/v1/chat/completions',
+      {
+        model: 'gpt-4o',
+        messages: openaiMessages,
+        temperature: 0.7,
+        max_tokens: 2000
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    // Extrair a resposta do modelo
+    const resposta = response.data.choices[0].message.content;
+    
+    // Atualizar dados de uso
+    usageData.success = true;
+    usageData.tokens_output = apiUsageTracker.estimateTokens(resposta);
+    usageData.cost = apiUsageTracker.calculateOpenAICost(
+      'gpt-4o', 
+      usageData.tokens_input, 
+      usageData.tokens_output
+    );
+
+    // Retornar a resposta
+    res.json(resposta);
+    
+  } catch (error) {
+    console.error('Erro ao conversar com agente:', error.response?.data || error.message);
+    usageData.success = false;
+    usageData.error_message = error.message;
+    res.status(500).json({ message: 'Erro ao processar solicitação de IA' });
+  } finally {
+    // Registrar uso da API
+    usageData.response_time_ms = Date.now() - startTime;
+    await apiUsageTracker.trackApiUsage(usageData);
   }
 }; 

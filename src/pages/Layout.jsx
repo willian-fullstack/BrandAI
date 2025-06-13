@@ -34,8 +34,21 @@ export default function Layout() {
   
   // Determinar a rota ativa
   const isActive = (path) => {
-    return location.pathname === path || 
-           (path !== '/' && location.pathname.startsWith(path));
+    // Verificar se o caminho atual corresponde ao caminho esperado, considerando os prefixos
+    const currentPath = location.pathname;
+    
+    // Para o Dashboard, é um caso especial
+    if (path === '/' && (currentPath === '/app' || currentPath === '/app/')) {
+      return true;
+    }
+    
+    // Para outras rotas, verificar tanto o caminho direto quanto o caminho com prefixo /app/
+    return currentPath === path || 
+           currentPath === `/app${path}` ||
+           (path !== '/' && (
+             currentPath.startsWith(path) || 
+             currentPath.startsWith(`/app${path}`)
+           ));
   };
 
   const handleLogout = () => {
@@ -124,7 +137,7 @@ export default function Layout() {
             <ul className="space-y-1.5">
               <li>
                 <Link
-                  to="/"
+                  to="/app"
                   className={`flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 ${
                     isActive('/') 
                       ? 'bg-primary/10 text-primary' 
@@ -137,7 +150,7 @@ export default function Layout() {
               </li>
               <li>
                 <Link
-                  to="/conversas"
+                  to="/app/conversas"
                   className={`flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 ${
                     isActive('/conversas')
                       ? 'bg-primary/10 text-primary' 
@@ -150,7 +163,7 @@ export default function Layout() {
               </li>
               <li>
                 <Link
-                  to="/agentes"
+                  to="/app/agentes"
                   className={`flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 ${
                     isActive('/agentes')
                       ? 'bg-primary/10 text-primary' 
@@ -163,7 +176,7 @@ export default function Layout() {
               </li>
               <li>
                 <Link
-                  to="/planos"
+                  to="/app/planos"
                   className={`flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 ${
                     isActive('/planos')
                       ? 'bg-primary/10 text-primary' 
@@ -176,7 +189,7 @@ export default function Layout() {
               </li>
               <li>
                 <Link
-                  to="/afiliados"
+                  to="/app/afiliados"
                   className={`flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 ${
                     isActive('/afiliados')
                       ? 'bg-primary/10 text-primary' 
@@ -192,7 +205,7 @@ export default function Layout() {
               {userIsAdmin && (
                 <li>
                   <Link
-                    to="/admin"
+                    to="/app/admin"
                     className={`flex items-center px-3 py-2.5 rounded-lg transition-all duration-200 ${
                       isActive('/admin')
                         ? 'bg-primary/10 text-primary' 

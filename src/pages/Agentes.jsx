@@ -30,7 +30,7 @@ export default function Agentes() {
   };
 
   const navegarParaAgente = (agenteId) => {
-    navigate(`/chat?agente=${agenteId}`);
+    navigate(`/app/chat?agente=${agenteId}`);
   };
 
   if (loading) {

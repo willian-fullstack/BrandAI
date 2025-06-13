@@ -71,8 +71,18 @@ export const InvokeLLM = async (mensagens, agenteId, documentos = null) => {
       }));
     }
     
+    // Extrair o último prompt do usuário para enviar como parâmetro obrigatório
+    const lastUserMessage = mensagens.filter(msg => msg.role === 'user').pop();
+    const prompt = lastUserMessage ? lastUserMessage.content : '';
+    
+    if (!prompt) {
+      console.error('Erro: Prompt não encontrado nas mensagens');
+      throw new Error('Prompt não encontrado nas mensagens');
+    }
+    
     // Preparar os parâmetros para a API
     const params = {
+      prompt: prompt,
       messages: messages,
       agente_id: agenteId,
       file_urls: documentos
@@ -298,6 +308,39 @@ export const UploadTrainingDocument = async (agenteId, formData) => {
     return response.data;
   } catch (error) {
     throw error.response?.data || { message: 'Erro ao fazer upload do documento de treinamento' };
+  }
+};
+
+// Função alternativa para conversar com agentes
+export const ConversarComAgente = async (mensagens, agenteId, documentos = null) => {
+  try {
+    // Extrair a última mensagem do usuário para usar como prompt
+    const lastUserMessage = mensagens.filter(msg => msg.role === 'user').pop();
+    if (!lastUserMessage) {
+      throw new Error('Não foi possível encontrar uma mensagem do usuário');
+    }
+    
+    // Preparar os parâmetros para a API de forma que o backend possa processá-los corretamente
+    const params = {
+      prompt: lastUserMessage.content,
+      messages: mensagens,
+      agente_id: agenteId,
+      file_urls: documentos
+    };
+    
+    console.log('Enviando para API invoke-llm:', {
+      prompt: params.prompt.substring(0, 100) + '...',
+      total_messages: mensagens.length,
+      agente_id: agenteId,
+      documentos: documentos ? 'presentes' : 'ausentes'
+    });
+    
+    // Chamar diretamente o endpoint principal que sabemos que funciona
+    const response = await api.post('/integrations/invoke-llm', params);
+    return { resposta: response.data };
+  } catch (error) {
+    console.error('Erro ao conversar com agente:', error);
+    throw error;
   }
 };
 

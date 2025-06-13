@@ -59,7 +59,7 @@ export default function Conversas() {
   };
 
   const navegarParaChat = (conversaId) => {
-    navigate(`/chat?conversa=${conversaId}`);
+    navigate(`/app/chat?conversa=${conversaId}`);
   };
 
   const excluirConversa = async (id, e) => {

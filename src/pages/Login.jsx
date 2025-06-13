@@ -39,8 +39,8 @@ export default function Login() {
       localStorage.setItem('userToken', response.data.token);
       localStorage.setItem('userData', JSON.stringify(response.data));
       
-      // Redirecionar para a página inicial
-      navigate('/');
+      // Redirecionar para a rota /app após login bem-sucedido
+      navigate('/app');
     } catch (error) {
       setError(
         error.response?.data?.message || 

@@ -64,11 +64,11 @@ export default function Dashboard() {
   };
 
   const navegarParaChat = (conversaId) => {
-    navigate(`/chat?conversa=${conversaId}`);
+    navigate(`/app/chat?conversa=${conversaId}`);
   };
 
   const navegarParaAgente = (agenteId) => {
-    navigate(`/chat?agente=${agenteId}`);
+    navigate(`/app/chat?agente=${agenteId}`);
   };
 
   // Detectar mudanças de tema

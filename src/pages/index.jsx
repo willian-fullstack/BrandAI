@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './Layout';
 import Dashboard from './Dashboard';
@@ -11,7 +10,9 @@ import Admin from './Admin';
 import Login from './Login';
 import Register from './Register';
 import Diagnostico from './Diagnostico';
+import Home from './Home';
 import { isAuthenticated, isAdmin } from '../api/base44Client';
+import PropTypes from 'prop-types';
 
 // Componente de rota protegida
 const ProtectedRoute = ({ children }) => {
@@ -20,6 +21,11 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
   return children;
+};
+
+// Definição de PropTypes para o componente ProtectedRoute
+ProtectedRoute.propTypes = {
+  children: PropTypes.node.isRequired
 };
 
 // Componente de rota de administrador
@@ -31,16 +37,22 @@ const AdminRoute = ({ children }) => {
   return children;
 };
 
+// Definição de PropTypes para o componente AdminRoute
+AdminRoute.propTypes = {
+  children: PropTypes.node.isRequired
+};
+
 // Componente principal com rotas
 const AppRouter = () => {
   return (
     <Router>
       <Routes>
+        <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/diagnostico" element={<Diagnostico />} />
         
-        <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+        <Route path="/app" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
           <Route index element={<Dashboard />} />
           <Route path="chat" element={<Chat />} />
           <Route path="agentes" element={<Agentes />} />
@@ -49,6 +61,14 @@ const AppRouter = () => {
           <Route path="conversas" element={<Conversas />} />
           <Route path="admin" element={<AdminRoute><Admin /></AdminRoute>} />
         </Route>
+        
+        {/* Rotas diretas que redirecionam para as rotas dentro de /app */}
+        <Route path="/conversas" element={<ProtectedRoute><Navigate to="/app/conversas" replace /></ProtectedRoute>} />
+        <Route path="/agentes" element={<ProtectedRoute><Navigate to="/app/agentes" replace /></ProtectedRoute>} />
+        <Route path="/planos" element={<ProtectedRoute><Navigate to="/app/planos" replace /></ProtectedRoute>} />
+        <Route path="/afiliados" element={<ProtectedRoute><Navigate to="/app/afiliados" replace /></ProtectedRoute>} />
+        <Route path="/chat" element={<ProtectedRoute><Navigate to="/app/chat" replace /></ProtectedRoute>} />
+        <Route path="/admin" element={<AdminRoute><Navigate to="/app/admin" replace /></AdminRoute>} />
       </Routes>
     </Router>
   );

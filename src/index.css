@@ -231,3 +231,53 @@
 .stat-label {
   @apply text-muted-foreground text-sm;
 }
+
+/* Estilos específicos para a página inicial */
+.hero-glow {
+  position: absolute;
+  width: 80%;
+  height: 80%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -30%);
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+  border-radius: 50%;
+  filter: blur(80px);
+  z-index: 0;
+}
+
+.feature-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 25px -5px rgba(139, 92, 246, 0.1), 0 10px 10px -5px rgba(139, 92, 246, 0.04);
+}
+
+.pricing-card {
+  transition: transform 0.3s ease;
+}
+
+.pricing-card:hover {
+  transform: scale(1.02);
+}
+
+.navbar-blur {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+@media (max-width: 768px) {
+  .hero-heading {
+    font-size: 2.5rem;
+  }
+  
+  .feature-grid {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+  
+  .pricing-grid {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+}

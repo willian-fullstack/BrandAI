@@ -8,6 +8,22 @@ BrandAI é uma plataforma de inteligência artificial especializada para marcas 
 - **Sistema de Documentos de Treinamento**: Upload e gerenciamento de documentos para treinar os agentes com conhecimento específico
 - **Interface de Chat**: Comunicação intuitiva com os agentes de IA
 - **Painel Administrativo**: Gerenciamento completo de usuários, planos e configurações
+- **Efeitos Visuais Interativos**: Visualização 3D interativa de um cérebro que reage ao movimento do mouse, representando a IA avançada da plataforma
+
+## Componentes Visuais
+
+### Visualização 3D do Cérebro
+
+A página inicial apresenta uma visualização 3D interativa de um cérebro que:
+
+- É implementada usando Three.js, React Three Fiber e Drei em versões compatíveis (three@0.151.0, @react-three/fiber@8.14.5, @react-three/drei@9.88.0)
+- Consiste em uma esfera central representando o cérebro e partículas ao redor simulando conexões neurais
+- Alterna para visualização wireframe ao passar o mouse, revelando a estrutura interna
+- Mantém rotação suave contínua para destacar a tridimensionalidade
+- Utiliza materiais com efeitos brilhantes em tons de roxo, consistentes com a identidade visual
+- Oferece excelente performance mesmo em dispositivos com capacidade gráfica limitada
+
+Esta visualização representa visualmente a natureza avançada da inteligência artificial utilizada na plataforma e serve como elemento central de destaque na página inicial.
 
 ## Correções Recentes
 

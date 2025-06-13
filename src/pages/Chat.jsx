@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { User } from "@/api/entities";
 import { Conversa } from "@/api/entities";
 import { AgenteConfig } from "@/api/entities"; // Importar AgenteConfig
-import { InvokeLLM, GetGeneratedImages } from "@/api/integrations";
+import { GetGeneratedImages, ConversarComAgente } from "@/api/integrations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -91,18 +91,18 @@ export default function Chat() {
             }
           } else {
             // Usar o hook do React Router para navegar
-            navigate("/agentes", { replace: true });
+            navigate("/app/agentes", { replace: true });
             return;
           }
         } catch (error) {
           console.error("Erro ao buscar conversa:", error);
-          navigate("/agentes", { replace: true });
+          navigate("/app/agentes", { replace: true });
           return;
         }
       } else if (agenteParam) {
         // Verificar se o agente existe na configuração
         if (!agentesConfig[agenteParam]) {
-          navigate("/agentes", { replace: true });
+          navigate("/app/agentes", { replace: true });
           return;
         }
         
@@ -111,7 +111,7 @@ export default function Chat() {
           const planoAtual = planosConfig[userData.plano_atual] || planosConfig['basico'];
           const agentesDisponiveis = planoAtual.agentes;
           if (!agentesDisponiveis.includes(agenteParam)) {
-            navigate("/planos", { replace: true });
+            navigate("/app/planos", { replace: true });
             return;
           }
         }
@@ -150,12 +150,13 @@ export default function Chat() {
         setConversa(novaConversa);
         setMensagens([]);
       } else {
-        navigate("/agentes", { replace: true });
+        navigate("/app/agentes", { replace: true });
         return;
       }
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
-      navigate("/dashboard", { replace: true });
+      // Em vez de redirecionar para o dashboard, vamos para a página de agentes
+      navigate("/app/agentes", { replace: true });
     } finally {
       setLoading(false);
     }
@@ -225,7 +226,40 @@ export default function Chat() {
       }
 
       // Chamar a API para obter resposta do agente
-      const resposta = await InvokeLLM(
+      console.log("Enviando histórico de mensagens:", historicoMensagens);
+      
+      // Obter a última mensagem do usuário (que deve ser a atual)
+      const ultimaMensagemUsuario = novaMensagem.trim();
+      
+      // Verificar se temos as informações necessárias antes de chamar a API
+      if (!conversa.agente_id) {
+        console.error("ID do agente não definido");
+        throw new Error("ID do agente não definido");
+      }
+      
+      if (!ultimaMensagemUsuario) {
+        console.error("Mensagem do usuário vazia");
+        throw new Error("Mensagem do usuário vazia");
+      }
+      
+      // Salvar a conversa primeiro, para garantir que não seja perdida mesmo se houver erro na API
+      let conversaSalva = conversa;
+      if (!conversa.id) {
+        try {
+          conversaSalva = await Conversa.create({
+            ...conversa,
+            mensagens: novasMensagens
+          });
+          setConversa(conversaSalva);
+          // Atualizar URL para incluir o ID da conversa (sem replace: true para evitar problemas de navegação)
+          navigate(`/app/chat?conversa=${conversaSalva.id}`);
+        } catch (error) {
+          console.error("Erro ao salvar conversa inicial:", error);
+          // Continuar mesmo com erro para tentar obter a resposta
+        }
+      }
+      
+      const resposta = await ConversarComAgente(
         historicoMensagens,
         conversa.agente_id,
         temDocumentos ? agenteConfigData.documentos_treinamento : null
@@ -243,28 +277,29 @@ export default function Chat() {
         const mensagensAtualizadas = [...novasMensagens, mensagemAgente];
         setMensagens(mensagensAtualizadas);
 
-        // Se for primeira mensagem, salvar conversa no banco
-        if (!conversa.id) {
-          try {
-            const conversaSalva = await Conversa.create({
-              ...conversa,
+        // Se já salvamos a conversa anteriormente, apenas atualizamos
+        try {
+          if (conversaSalva.id) {
+            await Conversa.update(conversaSalva.id, {
               mensagens: mensagensAtualizadas
             });
-            setConversa(conversaSalva);
-            // Atualizar URL para incluir o ID da conversa
-            navigate(`/chat?conversa=${conversaSalva.id}`, { replace: true });
-          } catch (error) {
-            console.error("Erro ao salvar conversa:", error);
-          }
-        } else {
-          // Atualizar conversa existente
-          try {
+          } else if (conversa.id) {
+            // Caso tenha um ID mas não passamos pelo bloco anterior
             await Conversa.update(conversa.id, {
               mensagens: mensagensAtualizadas
             });
-          } catch (error) {
-            console.error("Erro ao atualizar conversa:", error);
+          } else {
+            // Última tentativa para caso o salvamento anterior tenha falhado
+            const novaSalva = await Conversa.create({
+              ...conversa,
+              mensagens: mensagensAtualizadas
+            });
+            setConversa(novaSalva);
+            navigate(`/app/chat?conversa=${novaSalva.id}`);
           }
+        } catch (error) {
+          console.error("Erro ao atualizar conversa com resposta:", error);
+          // Não interromper o fluxo por erro de salvamento
         }
       } else {
         throw new Error("Resposta inválida da API");
@@ -327,7 +362,7 @@ export default function Chat() {
           mensagens: novasMensagens
         });
         setConversa(conversaSalva);
-        navigate(`/chat?conversa=${conversaSalva.id}`, { replace: true });
+        navigate(`/app/chat?conversa=${conversaSalva.id}`);
       } else {
         await Conversa.update(conversa.id, {
           mensagens: novasMensagens
@@ -389,7 +424,7 @@ export default function Chat() {
             variant="ghost" 
             size="icon" 
             className="mr-2"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/app/agentes")}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -791,3 +826,4 @@ function formatMessageContent(content) {
   
   return <div dangerouslySetInnerHTML={{ __html: processedContent }} />;
 }
+

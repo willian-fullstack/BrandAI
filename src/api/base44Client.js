@@ -41,6 +41,20 @@ api.interceptors.response.use(
       if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login';
       }
+    } 
+    
+    // Para outros erros, apenas registrar no console e deixar o código que chamou
+    // a API lidar com o erro conforme necessário
+    if (error.response) {
+      console.error('Erro na resposta da API:', {
+        status: error.response.status,
+        data: error.response.data,
+        url: error.config?.url
+      });
+    } else if (error.request) {
+      console.error('Sem resposta da API:', error.request);
+    } else {
+      console.error('Erro ao configurar requisição:', error.message);
     }
     
     return Promise.reject(error);
