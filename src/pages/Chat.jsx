@@ -93,6 +93,34 @@ export default function Chat() {
           const conversaData = await Conversa.getById(conversaParam);
           
           if (conversaData) {
+            // Verificar se usuário tem acesso ao agente da conversa (admin tem acesso a todos)
+            if (userData.role !== 'admin') {
+              console.log("Chat - Verificando acesso para conversa existente com agente:", conversaData.agente_id);
+              
+              // 1. Obter os agentes do plano do usuário
+              const agentesDoPlano = planosConfig[userData.plano_atual]?.agentes || [];
+              
+              // 2. Obter os agentes liberados manualmente pelo admin
+              const agentesLiberadosIds = userData.agentes_liberados || [];
+              
+              // 3. Mapear os IDs do MongoDB para códigos de agentes
+              const agentesLiberadosCodigos = agentesLiberadosIds
+                .map(id => mapearIdParaCodigo(id))
+                .filter(codigo => codigo !== null);
+              
+              // 4. Verificar acesso
+              const temAcessoPorPlano = agentesDoPlano.includes(conversaData.agente_id);
+              const temAcessoManual = agentesLiberadosCodigos.includes(conversaData.agente_id);
+              
+              // Se não tem acesso, redirecionar para a página de conversas
+              if (!temAcessoPorPlano && !temAcessoManual) {
+                console.log("Chat - Usuário não tem mais acesso ao agente desta conversa, redirecionando");
+                alert("Você não tem mais acesso a este agente. Faça upgrade do seu plano ou entre em contato com o suporte.");
+                navigate("/app/conversas", { replace: true });
+                return;
+              }
+            }
+            
             setConversa(conversaData);
             setMensagens(conversaData.mensagens || []);
 
@@ -213,6 +241,51 @@ export default function Chat() {
     if (user?.role !== 'admin' && (user?.creditos_restantes <= 0)) {
       alert("Você não tem créditos suficientes. Faça upgrade do seu plano!");
       return;
+    }
+
+    // Verificar se o usuário ainda tem acesso ao agente (admin tem acesso a todos)
+    if (user?.role !== 'admin') {
+      try {
+        // Carregar configurações dos agentes do backend para verificação atualizada
+        const agentesData = await AgenteConfig.filter({ ativo: true });
+        const agentesConfigsData = agentesData || [];
+        
+        // Função para mapear IDs do MongoDB para códigos de agentes
+        const mapearIdParaCodigo = (id) => {
+          // Verificar se é um ID do MongoDB (24 caracteres hexadecimais)
+          if (typeof id === 'string' && id.length === 24 && /^[0-9a-f]{24}$/i.test(id)) {
+            // Encontrar o agente com o ID fornecido
+            const agenteConfig = agentesConfigsData.find(agente => agente._id === id);
+            return agenteConfig ? agenteConfig.codigo : null;
+          }
+          // Se não for um ID válido, retornar o próprio valor (pode ser um código direto)
+          return id;
+        };
+        
+        // 1. Obter os agentes do plano do usuário
+        const agentesDoPlano = planosConfig[user.plano_atual]?.agentes || [];
+        
+        // 2. Obter os agentes liberados manualmente pelo admin
+        const agentesLiberadosIds = user.agentes_liberados || [];
+        
+        // 3. Mapear os IDs do MongoDB para códigos de agentes
+        const agentesLiberadosCodigos = agentesLiberadosIds
+          .map(id => mapearIdParaCodigo(id))
+          .filter(codigo => codigo !== null);
+        
+        // 4. Verificar acesso
+        const temAcessoPorPlano = agentesDoPlano.includes(conversa.agente_id);
+        const temAcessoManual = agentesLiberadosCodigos.includes(conversa.agente_id);
+        
+        if (!temAcessoPorPlano && !temAcessoManual) {
+          alert("Você não tem mais acesso a este agente. Faça upgrade do seu plano ou entre em contato com o suporte.");
+          navigate("/app/conversas", { replace: true });
+          return;
+        }
+      } catch (error) {
+        console.error("Erro ao verificar acesso ao agente:", error);
+        // Em caso de erro na verificação, permitir continuar para não interromper a experiência do usuário
+      }
     }
 
     const mensagemUsuario = {
