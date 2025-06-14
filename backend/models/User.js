@@ -29,7 +29,7 @@ const userSchema = mongoose.Schema(
     },
     plano: {
       type: String,
-      enum: ['free', 'basic', 'pro', 'enterprise'],
+      enum: ['free', 'basic', 'pro', 'enterprise', 'basico', 'intermediario', 'premium'],
       default: 'free',
     },
     data_expiracao_plano: {
@@ -111,6 +111,11 @@ const userSchema = mongoose.Schema(
       type: String,
       enum: ['ativo', 'inativo', 'pendente'],
       default: 'ativo',
+    },
+    agentes_liberados: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: 'AgenteConfig',
+      default: [],
     },
   },
   {

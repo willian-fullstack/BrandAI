@@ -1,6 +1,5 @@
 import User from '../models/User.js';
 import generateToken from '../utils/generateToken.js';
-import bcrypt from 'bcryptjs';
 
 // @desc    Autenticar usuário e gerar token
 // @route   POST /api/users/login
@@ -41,7 +40,12 @@ export const authUser = async (req, res) => {
         email: user.email,
         role: user.role,
         plano: user.plano,
+        plano_atual: user.plano,
         avatar: user.avatar,
+        status: user.status,
+        creditos_restantes: user.creditos_disponiveis,
+        creditos_ilimitados: user.creditos_ilimitados,
+        agentes_liberados: user.agentes_liberados,
         token: generateToken(user._id),
       });
     } else {
@@ -52,7 +56,7 @@ export const authUser = async (req, res) => {
     console.error('Erro ao autenticar usuário:', error);
     res.status(500).json({ 
       message: 'Erro ao autenticar usuário',
-      errorDetails: process.env.NODE_ENV === 'development' ? error.message : undefined
+      errorDetails: error.message
     });
   }
 };
@@ -116,7 +120,7 @@ export const registerUser = async (req, res) => {
     
     res.status(500).json({ 
       message: 'Erro ao registrar usuário',
-      errorDetails: process.env.NODE_ENV === 'development' ? error.message : undefined
+      errorDetails: error.message
     });
   }
 };
@@ -129,7 +133,19 @@ export const getUserProfile = async (req, res) => {
     const user = await User.findById(req.user._id).select('-password');
 
     if (user) {
-      res.json(user);
+      res.json({
+        _id: user._id,
+        nome: user.nome,
+        email: user.email,
+        role: user.role,
+        plano: user.plano,
+        plano_atual: user.plano,
+        avatar: user.avatar,
+        status: user.status,
+        creditos_restantes: user.creditos_disponiveis,
+        creditos_ilimitados: user.creditos_ilimitados,
+        agentes_liberados: user.agentes_liberados,
+      });
     } else {
       res.status(404).json({ message: 'Usuário não encontrado' });
     }
@@ -163,7 +179,12 @@ export const updateUserProfile = async (req, res) => {
         email: updatedUser.email,
         role: updatedUser.role,
         plano: updatedUser.plano,
+        plano_atual: updatedUser.plano,
         avatar: updatedUser.avatar,
+        status: updatedUser.status,
+        creditos_restantes: updatedUser.creditos_disponiveis,
+        creditos_ilimitados: updatedUser.creditos_ilimitados,
+        agentes_liberados: updatedUser.agentes_liberados,
         token: generateToken(updatedUser._id),
       });
     } else {
@@ -230,7 +251,22 @@ export const getUserById = async (req, res) => {
     const user = await User.findById(req.params.id).select('-password');
 
     if (user) {
-      res.json(user);
+      res.json({
+        _id: user._id,
+        nome: user.nome,
+        email: user.email,
+        role: user.role,
+        plano: user.plano,
+        plano_atual: user.plano,
+        avatar: user.avatar,
+        status: user.status,
+        creditos_restantes: user.creditos_disponiveis,
+        creditos_ilimitados: user.creditos_ilimitados,
+        agentes_liberados: user.agentes_liberados,
+        ativo: user.ativo,
+        limite_conversas: user.limite_conversas,
+        limite_tokens: user.limite_tokens
+      });
     } else {
       res.status(404).json({ message: 'Usuário não encontrado' });
     }
@@ -251,10 +287,27 @@ export const updateUser = async (req, res) => {
       user.nome = req.body.nome || user.nome;
       user.email = req.body.email || user.email;
       user.role = req.body.role || user.role;
-      user.plano = req.body.plano || user.plano;
+      user.plano = req.body.plano_atual || user.plano;
       user.ativo = req.body.ativo !== undefined ? req.body.ativo : user.ativo;
       user.limite_conversas = req.body.limite_conversas || user.limite_conversas;
       user.limite_tokens = req.body.limite_tokens || user.limite_tokens;
+      
+      // Novos campos
+      if (req.body.agentes_liberados !== undefined) {
+        user.agentes_liberados = req.body.agentes_liberados;
+      }
+      
+      if (req.body.creditos_ilimitados !== undefined) {
+        user.creditos_ilimitados = req.body.creditos_ilimitados;
+      }
+      
+      if (req.body.creditos_restantes !== undefined) {
+        user.creditos_disponiveis = req.body.creditos_restantes;
+      }
+      
+      if (req.body.status !== undefined) {
+        user.status = req.body.status;
+      }
 
       const updatedUser = await user.save();
 
@@ -264,9 +317,14 @@ export const updateUser = async (req, res) => {
         email: updatedUser.email,
         role: updatedUser.role,
         plano: updatedUser.plano,
+        plano_atual: updatedUser.plano,
         ativo: updatedUser.ativo,
+        status: updatedUser.status,
         limite_conversas: updatedUser.limite_conversas,
         limite_tokens: updatedUser.limite_tokens,
+        agentes_liberados: updatedUser.agentes_liberados,
+        creditos_ilimitados: updatedUser.creditos_ilimitados,
+        creditos_restantes: updatedUser.creditos_disponiveis
       });
     } else {
       res.status(404).json({ message: 'Usuário não encontrado' });

@@ -106,6 +106,144 @@ Para garantir a compatibilidade e evitar problemas de renderização, o componen
 - @react-three/fiber: 8.14.5
 - @react-three/drei: 9.88.0
 
+## Gerenciamento de Usuários no Painel Administrativo
+
+### Visão Geral
+
+O painel administrativo inclui uma seção completa para gerenciamento de usuários, permitindo que administradores visualizem e configurem todos os usuários cadastrados na plataforma. Esta funcionalidade está implementada na aba "Usuários" do componente `Admin.jsx`.
+
+### Funcionalidades Principais
+
+1. **Listagem de Usuários**:
+   - Exibição de todos os usuários cadastrados em formato de tabela
+   - Informações exibidas: nome, email, plano, créditos, status e permissões de administrador
+   - Ordenação e filtragem para facilitar a localização de usuários específicos
+
+2. **Edição de Usuários**:
+   - Interface modal para edição completa de informações do usuário
+   - Campos editáveis: nome, email, status, plano, permissões de administrador
+   - Gerenciamento de créditos com opções para adicionar quantidades predefinidas ou definir um valor específico
+   - Opção para configurar créditos ilimitados
+
+3. **Gerenciamento de Acesso a Agentes**:
+   - Configuração granular de quais agentes cada usuário pode acessar
+   - Interface de seleção múltipla com checkboxes para cada agente disponível
+   - Visualização clara dos agentes já liberados para o usuário
+
+4. **Controle de Permissões**:
+   - Opção para promover usuários a administradores
+   - Configuração de status (ativo, inativo, pendente)
+   - Definição de plano (básico, intermediário, premium)
+
+### Implementação Técnica
+
+O gerenciamento de usuários é implementado utilizando:
+
+1. **Componentes de Interface**:
+   - Modal de edição com formulário completo
+   - Tabela responsiva para listagem de usuários
+   - Componentes de seleção, checkbox e input para configurações
+
+2. **Integração com API**:
+   - Método `User.getAll()` para listar todos os usuários
+   - Método `User.updateAdmin()` para atualizar informações de usuários
+   - Tratamento adequado de erros e feedback visual
+
+3. **Modelo de Dados**:
+   - Campo `agentes_liberados` no modelo de usuário para armazenar IDs dos agentes liberados
+   - Campo `creditos_ilimitados` para configuração de créditos sem limites
+   - Campo `role` para definir permissões de administrador
+
+### Exemplo de Código Relevante
+
+```jsx
+// Função para alternar a liberação de um agente para um usuário
+const toggleAgenteParaUsuario = (usuario, agenteId) => {
+  const agentesLiberados = usuario.agentes_liberados || [];
+  const novaLista = agentesLiberados.includes(agenteId)
+    ? agentesLiberados.filter(id => id !== agenteId)
+    : [...agentesLiberados, agenteId];
+  
+  setEditandoUsuario({
+    ...usuario,
+    agentes_liberados: novaLista
+  });
+};
+
+// Função para salvar alterações no usuário
+const handleSalvarUsuario = async () => {
+  try {
+    if (!editandoUsuario) return;
+    
+    const response = await User.updateAdmin(editandoUsuario._id, {
+      nome: editandoUsuario.nome,
+      email: editandoUsuario.email,
+      role: editandoUsuario.role,
+      plano_atual: editandoUsuario.plano_atual,
+      status: editandoUsuario.status,
+      creditos_restantes: editandoUsuario.creditos_restantes,
+      agentes_liberados: editandoUsuario.agentes_liberados || [],
+      creditos_ilimitados: editandoUsuario.creditos_ilimitados || false
+    });
+    
+    // Atualizar a lista de usuários
+    setUsuarios(usuarios.map(user => 
+      user._id === editandoUsuario._id ? response : user
+    ));
+    
+    setEditandoUsuario(null);
+    setNotificacao({
+      tipo: 'sucesso',
+      mensagem: 'Usuário atualizado com sucesso!'
+    });
+  } catch (error) {
+    console.error('Erro ao atualizar usuário:', error);
+    setNotificacao({
+      tipo: 'erro',
+      mensagem: `Erro ao atualizar usuário: ${error.message || 'Erro desconhecido'}`
+    });
+  }
+};
+```
+
+### Considerações de Segurança
+
+1. **Validação de Permissões**:
+   - Apenas administradores têm acesso ao painel de gerenciamento de usuários
+   - Middleware de autenticação no backend verifica permissões antes de permitir operações
+   
+2. **Validação de Dados**:
+   - Validação no frontend e backend para garantir integridade dos dados
+   - Tratamento adequado de erros com feedback visual para o administrador
+
+3. **Auditoria**:
+   - Registro de alterações em usuários para fins de auditoria
+   - Logs detalhados de operações de administração
+
 ### Conclusão
 
-Esta implementação oferece uma experiência visual interativa que reforça o conceito central da plataforma BrandAI. A representação estilizada do cérebro com efeito wireframe ao passar o mouse simboliza a inteligência artificial da plataforma, enquanto mantém a consistência visual com a identidade da marca e garante boa performance em diversos dispositivos. 
+O sistema de gerenciamento de usuários oferece controle completo sobre os usuários da plataforma, permitindo configurações granulares de permissões, créditos e acesso a agentes. A interface intuitiva facilita a administração mesmo com um grande número de usuários, mantendo a segurança e a integridade dos dados.
+
+## Gestão de Acesso a Agentes
+
+O sistema implementa uma abordagem híbrida para gerenciar o acesso dos usuários aos agentes IA:
+
+1. **Acesso baseado em plano**:
+   - Cada plano (básico, intermediário, premium) tem uma lista predefinida de agentes disponíveis
+   - A configuração dos agentes por plano é centralizada no arquivo `src/config/agentes.js`
+   - Por padrão, os usuários têm acesso aos agentes incluídos em seu plano atual
+
+2. **Acesso personalizado pelo admin**:
+   - Administradores podem personalizar o acesso de cada usuário aos agentes
+   - Ao editar um usuário no painel admin, o administrador pode:
+     - Selecionar manualmente quais agentes estarão disponíveis para o usuário
+     - Ao mudar o plano do usuário, os agentes são automaticamente atualizados conforme o novo plano
+     - As personalizações manuais têm prioridade sobre as configurações do plano
+
+3. **Verificação de acesso**:
+   - O sistema verifica o acesso aos agentes em dois níveis:
+     - Verifica se o agente está disponível no plano do usuário
+     - Verifica se o agente foi liberado manualmente pelo administrador
+   - O usuário tem acesso se qualquer uma das condições for atendida
+
+Esta abordagem oferece flexibilidade para configurar o acesso padrão por plano e, ao mesmo tempo, permite personalizações específicas por usuário quando necessário. 

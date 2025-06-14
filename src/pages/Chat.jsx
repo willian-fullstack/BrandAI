@@ -71,6 +71,22 @@ export default function Chat() {
       const userData = await User.me();
       setUser(userData);
 
+      // Carregar configurações dos agentes do backend
+      const agentesData = await AgenteConfig.filter({ ativo: true });
+      const agentesConfigsData = agentesData || [];
+      
+      // Função para mapear IDs do MongoDB para códigos de agentes
+      const mapearIdParaCodigo = (id) => {
+        // Verificar se é um ID do MongoDB (24 caracteres hexadecimais)
+        if (typeof id === 'string' && id.length === 24 && /^[0-9a-f]{24}$/i.test(id)) {
+          // Encontrar o agente com o ID fornecido
+          const agenteConfig = agentesConfigsData.find(agente => agente._id === id);
+          return agenteConfig ? agenteConfig.codigo : null;
+        }
+        // Se não for um ID válido, retornar o próprio valor (pode ser um código direto)
+        return id;
+      };
+
       if (conversaParam) {
         // Carregando conversa existente
         try {
@@ -100,17 +116,41 @@ export default function Chat() {
           return;
         }
       } else if (agenteParam) {
-        // Verificar se o agente existe na configuração
-        if (!agentesConfig[agenteParam]) {
-          navigate("/app/agentes", { replace: true });
-          return;
-        }
-        
         // Verificar se usuário tem acesso ao agente (admin tem acesso a todos)
         if (userData.role !== 'admin') {
-          const planoAtual = planosConfig[userData.plano_atual] || planosConfig['basico'];
-          const agentesDisponiveis = planoAtual.agentes;
-          if (!agentesDisponiveis.includes(agenteParam)) {
+          console.log("Chat - Verificando acesso para agente:", agenteParam);
+          console.log("Chat - Dados do usuário:", userData);
+          console.log("Chat - Agentes liberados:", userData.agentes_liberados);
+          console.log("Chat - Plano atual:", userData.plano_atual);
+          
+          // Verificar se o agente existe na configuração
+          if (!agentesConfig[agenteParam]) {
+            console.log("Chat - Agente não encontrado na configuração");
+            navigate("/app/agentes", { replace: true });
+            return;
+          }
+          
+          // 1. Obter os agentes do plano do usuário
+          const agentesDoPlano = planosConfig[userData.plano_atual]?.agentes || [];
+          console.log("Chat - Agentes do plano:", agentesDoPlano);
+          
+          // 2. Obter os agentes liberados manualmente pelo admin
+          const agentesLiberadosIds = userData.agentes_liberados || [];
+          console.log("Chat - Agentes liberados IDs:", agentesLiberadosIds);
+          
+          // 3. Mapear os IDs do MongoDB para códigos de agentes
+          const agentesLiberadosCodigos = agentesLiberadosIds
+            .map(id => mapearIdParaCodigo(id))
+            .filter(codigo => codigo !== null);
+          console.log("Chat - Agentes liberados mapeados para códigos:", agentesLiberadosCodigos);
+          
+          // 4. Verificar acesso
+          const temAcessoPorPlano = agentesDoPlano.includes(agenteParam);
+          const temAcessoManual = agentesLiberadosCodigos.includes(agenteParam);
+          
+          // Se não tem acesso, redirecionar
+          if (!temAcessoPorPlano && !temAcessoManual) {
+            console.log("Chat - Usuário não tem acesso ao agente, redirecionando");
             navigate("/app/planos", { replace: true });
             return;
           }

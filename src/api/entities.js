@@ -400,6 +400,15 @@ export const User = {
     }
   },
   
+  updateAdmin: async (id, userData) => {
+    try {
+      const response = await api.put(`/users/${id}`, userData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: 'Erro ao atualizar usuário' };
+    }
+  },
+  
   delete: async (id) => {
     try {
       const response = await api.delete(`/users/${id}`);
@@ -411,17 +420,20 @@ export const User = {
   
   me: async () => {
     try {
-      // Primeiro, tenta obter os dados do localStorage
-      const userData = localStorage.getItem('userData');
-      if (userData) {
-        // Se existir, retorna os dados
-        return JSON.parse(userData);
-      } else {
-        // Se não existir, busca do servidor
+      // Primeiro, tenta buscar os dados mais recentes do servidor
+      try {
         const response = await api.get('/users/profile');
         // Atualiza o localStorage com os dados mais recentes
         localStorage.setItem('userData', JSON.stringify(response.data));
         return response.data;
+      } catch (error) {
+        // Se falhar a busca no servidor, tenta usar dados em cache
+        const userData = localStorage.getItem('userData');
+        if (userData) {
+          return JSON.parse(userData);
+        }
+        // Se não tiver dados em cache, propaga o erro
+        throw error;
       }
     } catch (error) {
       throw error.response?.data || { message: 'Erro ao buscar dados do usuário' };

@@ -23,12 +23,14 @@ import {
 import { motion } from "framer-motion";
 import { agentesConfig, planosConfig } from "@/config/agentes";
 import ThemeToggle from "@/components/ui/theme-toggle";
+import { AgenteConfig } from "@/api/entities";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [conversas, setConversas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [agenteUsageData, setAgenteUsageData] = useState({});
+  const [agentesConfigs, setAgentesConfigs] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -56,6 +58,10 @@ export default function Dashboard() {
       });
       
       setAgenteUsageData(usageCounts);
+      
+      // Carregar configurações dos agentes do backend
+      const agentesData = await AgenteConfig.filter({ ativo: true });
+      setAgentesConfigs(agentesData);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
@@ -86,10 +92,48 @@ export default function Dashboard() {
     }
   }, []);
 
+  // Função para mapear IDs do MongoDB para códigos de agentes
+  const mapearIdParaCodigo = (id) => {
+    // Verificar se é um ID do MongoDB (24 caracteres hexadecimais)
+    if (typeof id === 'string' && id.length === 24 && /^[0-9a-f]{24}$/i.test(id)) {
+      // Encontrar o agente com o ID fornecido
+      const agenteConfig = agentesConfigs.find(agente => agente._id === id);
+      return agenteConfig ? agenteConfig.codigo : null;
+    }
+    // Se não for um ID válido, retornar o próprio valor (pode ser um código direto)
+    return id;
+  };
+
   const agentesDisponiveis = user ? (
     user.role === 'admin'
       ? Object.keys(agentesConfig)
-      : planosConfig[user.plano_atual]?.agentes || []
+      : (() => {
+          console.log("Dashboard - Dados do usuário:", user);
+          console.log("Dashboard - Agentes liberados:", user.agentes_liberados);
+          console.log("Dashboard - Plano atual:", user.plano_atual);
+          
+          // Para usuários não-admin, precisamos verificar quais agentes estão disponíveis
+          
+          // 1. Obter os agentes do plano do usuário
+          const agentesDoPlano = planosConfig[user.plano_atual]?.agentes || [];
+          console.log("Dashboard - Agentes do plano:", agentesDoPlano);
+          
+          // 2. Obter os agentes liberados manualmente pelo admin
+          const agentesLiberadosIds = user.agentes_liberados || [];
+          console.log("Dashboard - Agentes liberados IDs:", agentesLiberadosIds);
+          
+          // 3. Mapear os IDs do MongoDB para códigos de agentes
+          const agentesLiberadosCodigos = agentesLiberadosIds
+            .map(id => mapearIdParaCodigo(id))
+            .filter(codigo => codigo !== null);
+          console.log("Dashboard - Agentes liberados mapeados para códigos:", agentesLiberadosCodigos);
+          
+          // 4. Se o usuário tiver agentes liberados manualmente, usar esses
+          // Caso contrário, usar os agentes do plano
+          return agentesLiberadosCodigos.length > 0 
+            ? agentesLiberadosCodigos 
+            : agentesDoPlano;
+        })()
   ) : [];
   
   // Preparar dados para o gráfico de uso de agentes
@@ -295,7 +339,9 @@ export default function Dashboard() {
                         >
                           <div className="relative h-full flex flex-col justify-end">
                             <div 
-                              className={`bg-gradient-to-br ${agente.cor} opacity-80 rounded-t-md transition-all duration-300 group-hover:opacity-100`} 
+                              className={`bg-gradient-to-br ${
+                                agente.cor || 'from-gray-500 to-gray-600'
+                              } opacity-80 rounded-t-md transition-all duration-300 group-hover:opacity-100`} 
                               style={{ height: `${Math.max(20, (agente.count / maxUsage) * 100)}%`, minHeight: '20px' }}
                             >
                               <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
@@ -362,8 +408,15 @@ export default function Dashboard() {
               >
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center">
-                    <div className={`w-10 h-10 rounded-full bg-gradient-to-r ${agentesConfig[conversa.agente_id]?.cor || "from-slate-500 to-slate-600"} flex items-center justify-center mr-4`}>
-                      {agentesConfig[conversa.agente_id]?.icon || <MessageSquare className="h-5 w-5 text-white" />}
+                    <div className={`w-10 h-10 rounded-full bg-gradient-to-r ${
+                      conversa.agente_id && agentesConfig[conversa.agente_id] 
+                        ? agentesConfig[conversa.agente_id].cor 
+                        : "from-slate-500 to-slate-600"
+                    } flex items-center justify-center mr-4`}>
+                      {conversa.agente_id && agentesConfig[conversa.agente_id]
+                        ? agentesConfig[conversa.agente_id].icon 
+                        : <MessageSquare className="h-5 w-5 text-white" />
+                      }
                     </div>
                     <div>
                       <h3 className="font-medium">{conversa.titulo || "Conversa sem título"}</h3>

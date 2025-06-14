@@ -6,7 +6,7 @@ import { AgenteConfig } from "@/api/entities";
 import { ConfiguracaoPagamento } from "@/api/entities";
 import { ConfiguracaoIA } from "@/api/entities";
 import { ConfiguracaoPlanos } from "@/api/entities";
-import { UploadFile, UploadTrainingDocument } from "@/api/integrations";
+import { UploadTrainingDocument } from "@/api/integrations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,10 +19,8 @@ import {
   Users,
   DollarSign,
   MessageSquare,
-  TrendingUp,
   Crown,
   CheckCircle,
-  Clock,
   BarChart,
   Settings,
   Upload,
@@ -31,18 +29,20 @@ import {
   Save,
   Trash2,
   Edit,
-  CreditCard,
-  KeyRound,
-  Brain,
   RefreshCcw,
   AlertCircle,
-  ArrowLeft
+  ArrowLeft,
+  Plus,
+  X
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Importar o agentesConfig do arquivo centralizado
-import { agentesConfig } from "@/config/agentes";
+import { agentesConfig, planosConfig } from "@/config/agentes";
 
 export default function Admin() {
   const [usuarios, setUsuarios] = useState([]);
@@ -54,9 +54,9 @@ export default function Admin() {
   const [configPlanos, setConfigPlanos] = useState({});
   const [loading, setLoading] = useState(true);
   const [editandoAgente, setEditandoAgente] = useState(null);
+  const [editandoUsuario, setEditandoUsuario] = useState(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [modalAgente, setModalAgente] = useState(false);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [agenteAtual, setAgenteAtual] = useState({
     codigo: '',
@@ -117,96 +117,44 @@ export default function Admin() {
 
   const loadData = async () => {
     try {
-      // Carregar dados básicos primeiro
-      const [usuariosData, indicacoesData, conversasData] = await Promise.all([
-        User.getAll(),
-        Indicacao.getAll(),
-        Conversa.getAll()
-      ]);
-
-      setUsuarios(Array.isArray(usuariosData) ? usuariosData : []);
-      setIndicacoes(Array.isArray(indicacoesData) ? indicacoesData : []);
-      setConversas(Array.isArray(conversasData) ? conversasData : []);
-
-      // Tentar carregar configurações de agentes (pode não existir ainda)
-      try {
-        console.log("Iniciando carregamento dos agentes...");
-        const agentesData = await AgenteConfig.getAll();
-        console.log("Dados recebidos da API:", agentesData);
-        
-        if (!agentesData || (Array.isArray(agentesData) && agentesData.length === 0)) {
-          console.log("Nenhum agente encontrado, inicializando array vazio");
-          setAgentesConfigs([]);
-        } else {
-          console.log("Configurando agentes no state:", agentesData);
-          setAgentesConfigs(agentesData);
-          
-          // Calcular quantos agentes extras existem no banco
-          const agentesFrontend = Object.keys(agentesConfig);
-          console.log("Agentes definidos no frontend:", agentesFrontend);
-          
-          const agentesExcedentes = Array.isArray(agentesData) 
-            ? agentesData.filter(agente => !agentesFrontend.includes(agente.codigo)).length
-            : 0;
-          
-          console.log("Agentes excedentes detectados:", agentesExcedentes);
-          
-          setSincronizacaoInfo({
-            ...sincronizacaoInfo,
-            agentesExcedentes
-          });
-        }
-      } catch (error) {
-        console.error("Erro ao carregar AgenteConfig:", error);
-        console.error("Detalhes do erro:", error.response || error.message || error);
-        setAgentesConfigs([]); // Inicializa como array vazio para evitar erros no map/filter
+      setLoading(true);
+      
+      // Carregar usuários com informações completas
+      const usersResponse = await User.getAll();
+      if (usersResponse && usersResponse.users) {
+        // Garantir que os dados dos usuários estejam completos
+        const usuariosCompletos = await Promise.all(
+          usersResponse.users.map(async (user) => {
+            try {
+              // Buscar informações detalhadas de cada usuário
+              const userDetails = await User.getById(user._id);
+              return userDetails;
+            } catch (error) {
+              console.error(`Erro ao carregar detalhes do usuário ${user._id}:`, error);
+              return user; // Retornar usuário original em caso de erro
+            }
+          })
+        );
+        setUsuarios(usuariosCompletos);
+      } else {
+        setUsuarios([]);
       }
-
-      // Tentar carregar configurações de pagamento, IA e planos
-      try {
-        const [pagamentoDataResults, iaDataResults, planosDataResults] = await Promise.all([
-          ConfiguracaoPagamento.getAll(),
-          ConfiguracaoIA.getAll(),
-          ConfiguracaoPlanos.getAll()
-        ]);
-
-        // Processar configurações de pagamento
-        setConfigPagamento(pagamentoDataResults && pagamentoDataResults.length > 0 
-          ? pagamentoDataResults[0] 
-          : {
-              gateway_mundpay_client_id: "",
-              gateway_mundpay_client_secret: "",
-              gateway_mercadopago_public_key: "",
-              gateway_mercadopago_access_token: "",
-              gateway_mercadopago_webhook_secret: ""
-            }
-        );
-
-        // Processar configurações de IA
-        setConfigIA(iaDataResults && iaDataResults.length > 0 
-          ? iaDataResults[0] 
-          : {
-              gpt_api_key: "",
-              modelo_preferencial_ia: "gpt-3.5-turbo"
-            }
-        );
-
-        // Processar configurações de planos
-        setConfigPlanos(planosDataResults && planosDataResults.length > 0 
-          ? planosDataResults[0] 
-          : {
-              plano_basico_preco_mensal: 67,
-              plano_basico_preco_anual: 597,
-              plano_intermediario_preco_mensal: 97,
-              plano_intermediario_preco_anual: 870,
-              plano_premium_preco_mensal: 127,
-              plano_premium_preco_anual: 997
-            }
-        );
-      } catch (error) {
-        console.warn("Erro ao carregar configurações:", error);
-      }
-
+      
+      // Carregar agentes
+      const agentesResponse = await AgenteConfig.getAll();
+      setAgentesConfigs(agentesResponse || []);
+      
+      // Carregar conversas
+      const conversasResponse = await Conversa.getAll();
+      setConversas(conversasResponse || []);
+      
+      // Carregar indicações
+      const indicacoesResponse = await Indicacao.getAll();
+      setIndicacoes(indicacoesResponse || []);
+      
+      // Carregar configurações
+      await loadConfigPlanos();
+      
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
@@ -599,6 +547,141 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
     } finally {
       setLoading(false);
       setSincronizacaoInfo({ ...sincronizacaoInfo, sincronizando: false });
+    }
+  };
+
+  // Função para atualizar um usuário
+  const handleSalvarUsuario = async () => {
+    try {
+      if (!editandoUsuario) return;
+      
+      // Garantir que os campos estejam no formato correto
+      const userData = {
+        nome: editandoUsuario.nome,
+        email: editandoUsuario.email,
+        role: editandoUsuario.role,
+        plano_atual: editandoUsuario.plano_atual,
+        status: editandoUsuario.status,
+        creditos_restantes: parseInt(editandoUsuario.creditos_restantes || 0),
+        agentes_liberados: Array.isArray(editandoUsuario.agentes_liberados) 
+          ? editandoUsuario.agentes_liberados 
+          : [],
+        creditos_ilimitados: Boolean(editandoUsuario.creditos_ilimitados)
+      };
+      
+      // Atualizar o usuário no servidor
+      const response = await User.updateAdmin(editandoUsuario._id, userData);
+      
+      // Atualizar a lista de usuários com os dados completos
+      setUsuarios(prevUsuarios => 
+        prevUsuarios.map(user => 
+          user._id === editandoUsuario._id ? response : user
+        )
+      );
+      
+      setEditandoUsuario(null);
+      setNotificacao({
+        tipo: 'sucesso',
+        mensagem: 'Usuário atualizado com sucesso!'
+      });
+      
+      // Recarregar todos os dados para garantir consistência
+      loadData();
+      
+      // Limpar notificação após 3 segundos
+      setTimeout(() => {
+        setNotificacao({ tipo: null, mensagem: '' });
+      }, 3000);
+    } catch (error) {
+      console.error('Erro ao atualizar usuário:', error);
+      setNotificacao({
+        tipo: 'erro',
+        mensagem: `Erro ao atualizar usuário: ${error.message || 'Erro desconhecido'}`
+      });
+      
+      // Limpar notificação após 5 segundos
+      setTimeout(() => {
+        setNotificacao({ tipo: null, mensagem: '' });
+      }, 5000);
+    }
+  };
+
+  // Função para adicionar créditos a um usuário
+  const adicionarCreditos = (usuario, creditos) => {
+    setEditandoUsuario({
+      ...usuario,
+      creditos_restantes: (parseInt(usuario.creditos_restantes || 0) + parseInt(creditos))
+    });
+  };
+
+  // Função para alternar status de admin de um usuário
+  const toggleAdmin = (usuario) => {
+    setEditandoUsuario({
+      ...usuario,
+      role: usuario.role === 'admin' ? 'user' : 'admin'
+    });
+  };
+
+  // Função para alternar a liberação de um agente para um usuário
+  const toggleAgenteParaUsuario = (usuario, agenteId) => {
+    // Garantir que agentes_liberados seja um array
+    const agentesLiberados = Array.isArray(usuario.agentes_liberados) 
+      ? [...usuario.agentes_liberados] 
+      : [];
+    
+    // Verificar se o ID do agente já está na lista
+    const agenteIndex = agentesLiberados.findIndex(id => id === agenteId);
+    
+    // Criar nova lista de agentes liberados
+    let novaLista;
+    if (agenteIndex >= 0) {
+      // Se já existe, remover
+      novaLista = [...agentesLiberados];
+      novaLista.splice(agenteIndex, 1);
+    } else {
+      // Se não existe, adicionar
+      novaLista = [...agentesLiberados, agenteId];
+    }
+    
+    // Atualizar o usuário com a nova lista
+    setEditandoUsuario({
+      ...usuario,
+      agentes_liberados: novaLista
+    });
+  };
+
+  // Função para atualizar os agentes liberados com base no plano selecionado
+  const atualizarAgentesPorPlano = (plano) => {
+    if (!editandoUsuario) return;
+    
+    // Obter os códigos dos agentes disponíveis para o plano selecionado
+    const codigosAgentesDoPlano = planosConfig[plano]?.agentes || [];
+    
+    // Mapear os códigos para IDs do MongoDB
+    const idsAgentesDoPlano = codigosAgentesDoPlano
+      .map(codigo => {
+        const agente = agentesConfigs.find(a => a.codigo === codigo);
+        return agente ? agente._id : null;
+      })
+      .filter(id => id !== null); // Remover valores nulos
+    
+    // Atualizar o usuário com o novo plano e os agentes correspondentes
+    setEditandoUsuario({
+      ...editandoUsuario,
+      plano_atual: plano,
+      agentes_liberados: idsAgentesDoPlano // Usar os IDs do MongoDB
+    });
+  };
+
+  // Função para carregar configurações de planos
+  const loadConfigPlanos = async () => {
+    try {
+      const planosData = await ConfiguracaoPlanos.getAll();
+      if (planosData && planosData.length > 0) {
+        setConfigPlanos(planosData[0]);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar configurações de planos:", error);
     }
   };
 
@@ -1045,13 +1128,14 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
                         <th className="p-3 text-left">Plano</th>
                         <th className="p-3 text-left">Créditos</th>
                         <th className="p-3 text-left">Status</th>
+                        <th className="p-3 text-left">Admin</th>
                         <th className="p-3 text-left">Ações</th>
                       </tr>
                     </thead>
                     <tbody>
                       {Array.isArray(usuarios) && usuarios.map((usuario) => (
-                        <tr key={usuario.id} className="border-b hover:bg-muted/30">
-                          <td className="p-3">{usuario.full_name}</td>
+                        <tr key={usuario._id} className="border-b hover:bg-muted/30">
+                          <td className="p-3">{usuario.nome}</td>
                           <td className="p-3">{usuario.email}</td>
                           <td className="p-3">
                             <Badge variant={
@@ -1064,14 +1148,27 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
                                'Básico'}
                             </Badge>
                           </td>
-                          <td className="p-3">{usuario.creditos_restantes}</td>
+                          <td className="p-3">
+                            {usuario.creditos_ilimitados ? 
+                              <span className="text-green-500 font-medium">Ilimitado</span> : 
+                              usuario.creditos_restantes || 0}
+                          </td>
                           <td className="p-3">
                             <Badge variant={usuario.status === 'ativo' ? 'success' : 'destructive'}>
                               {usuario.status === 'ativo' ? 'Ativo' : 'Inativo'}
                             </Badge>
                           </td>
                           <td className="p-3">
-                            <Button variant="ghost" size="sm">
+                            <Badge variant={usuario.role === 'admin' ? 'success' : 'outline'}>
+                              {usuario.role === 'admin' ? 'Sim' : 'Não'}
+                            </Badge>
+                          </td>
+                          <td className="p-3">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => setEditandoUsuario(usuario)}
+                            >
                               <Edit className="h-4 w-4" />
                             </Button>
                           </td>
@@ -1079,7 +1176,7 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
                       ))}
                       {(!Array.isArray(usuarios) || usuarios.length === 0) && (
                         <tr>
-                          <td colSpan="6" className="p-3 text-center text-muted-foreground">Nenhum usuário encontrado</td>
+                          <td colSpan="7" className="p-3 text-center text-muted-foreground">Nenhum usuário encontrado</td>
                         </tr>
                       )}
                     </tbody>
@@ -1087,6 +1184,184 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
                 </div>
               </CardContent>
             </Card>
+            
+            {/* Modal de Edição de Usuário */}
+            {editandoUsuario && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                exit={{ opacity: 0, y: 20 }}
+                className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+              >
+                <Card className="w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>Editar Usuário: {editandoUsuario.nome}</CardTitle>
+                    <Button variant="ghost" size="icon" onClick={() => setEditandoUsuario(null)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Informações Básicas */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-medium">Informações Básicas</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="nome">Nome</Label>
+                          <Input 
+                            id="nome"
+                            value={editandoUsuario.nome || ''}
+                            onChange={(e) => setEditandoUsuario({...editandoUsuario, nome: e.target.value})}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="email">Email</Label>
+                          <Input 
+                            id="email"
+                            value={editandoUsuario.email || ''}
+                            onChange={(e) => setEditandoUsuario({...editandoUsuario, email: e.target.value})}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Status e Permissões */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-medium">Status e Permissões</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="status">Status</Label>
+                          <Select 
+                            value={editandoUsuario.status || 'ativo'}
+                            onValueChange={(value) => setEditandoUsuario({...editandoUsuario, status: value})}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="ativo">Ativo</SelectItem>
+                              <SelectItem value="inativo">Inativo</SelectItem>
+                              <SelectItem value="pendente">Pendente</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="plano">Plano</Label>
+                          <Select 
+                            value={editandoUsuario.plano_atual || 'basico'}
+                            onValueChange={(value) => {
+                              setEditandoUsuario({...editandoUsuario, plano_atual: value});
+                              atualizarAgentesPorPlano(value);
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o plano" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="basico">Básico</SelectItem>
+                              <SelectItem value="intermediario">Intermediário</SelectItem>
+                              <SelectItem value="premium">Premium</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="admin"
+                          checked={editandoUsuario.role === 'admin'}
+                          onCheckedChange={() => toggleAdmin(editandoUsuario)}
+                        />
+                        <Label htmlFor="admin" className="font-medium">Usuário Administrador</Label>
+                      </div>
+                    </div>
+
+                    {/* Créditos */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-medium">Gerenciamento de Créditos</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="creditos">Créditos Atuais</Label>
+                          <Input 
+                            id="creditos"
+                            type="number"
+                            value={editandoUsuario.creditos_restantes || 0}
+                            onChange={(e) => setEditandoUsuario({...editandoUsuario, creditos_restantes: parseInt(e.target.value)})}
+                            disabled={editandoUsuario.creditos_ilimitados}
+                          />
+                        </div>
+                        <div className="flex items-end gap-2">
+                          <Button 
+                            onClick={() => adicionarCreditos(editandoUsuario, 10)}
+                            disabled={editandoUsuario.creditos_ilimitados}
+                            variant="outline"
+                          >
+                            <Plus className="h-4 w-4 mr-1" /> 10
+                          </Button>
+                          <Button 
+                            onClick={() => adicionarCreditos(editandoUsuario, 50)}
+                            disabled={editandoUsuario.creditos_ilimitados}
+                            variant="outline"
+                          >
+                            <Plus className="h-4 w-4 mr-1" /> 50
+                          </Button>
+                          <Button 
+                            onClick={() => adicionarCreditos(editandoUsuario, 100)}
+                            disabled={editandoUsuario.creditos_ilimitados}
+                            variant="outline"
+                          >
+                            <Plus className="h-4 w-4 mr-1" /> 100
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Checkbox 
+                          id="creditos_ilimitados"
+                          checked={editandoUsuario.creditos_ilimitados || false}
+                          onCheckedChange={(checked) => setEditandoUsuario({...editandoUsuario, creditos_ilimitados: checked})}
+                        />
+                        <Label htmlFor="creditos_ilimitados" className="font-medium">Créditos Ilimitados</Label>
+                      </div>
+                    </div>
+
+                    {/* Agentes Liberados */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-medium">Agentes Liberados</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        {Array.isArray(agentesConfigs) && agentesConfigs.map((agente) => (
+                          <div key={agente._id} className="flex items-center space-x-2">
+                            <Checkbox 
+                              id={`agente-${agente._id}`}
+                              checked={(editandoUsuario.agentes_liberados || []).includes(agente._id)}
+                              onCheckedChange={() => toggleAgenteParaUsuario(editandoUsuario, agente._id)}
+                            />
+                            <Label 
+                              htmlFor={`agente-${agente._id}`} 
+                              className="font-medium"
+                              style={{ color: agente.cor }}
+                            >
+                              {agente.nome}
+                            </Label>
+                          </div>
+                        ))}
+                        {(!Array.isArray(agentesConfigs) || agentesConfigs.length === 0) && (
+                          <p className="text-muted-foreground col-span-2">Nenhum agente configurado no sistema.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-4">
+                      <Button variant="outline" onClick={() => setEditandoUsuario(null)}>
+                        Cancelar
+                      </Button>
+                      <Button onClick={handleSalvarUsuario}>
+                        <Save className="h-4 w-4 mr-2" />
+                        Salvar Alterações
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
           </TabsContent>
 
           {/* Financeiro Content */}
