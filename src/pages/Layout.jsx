@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutGrid,
@@ -12,24 +12,26 @@ import {
   ChevronDown,
   User,
   MessageSquare,
-  Search
+  Search,
+  Bell
 } from 'lucide-react';
-import { logout, getCurrentUser, isAdmin } from '../api/base44Client';
-import { motion } from 'framer-motion';
-import NotificationsPanel, { NotificationIcon } from '@/components/ui/notifications-panel';
-import ThemeToggle from '@/components/ui/theme-toggle';
+import { motion, AnimatePresence } from 'framer-motion';
+import NotificationsPanel from '@/components/ui/notifications-panel';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { User as UserEntity } from "@/api/entities";
+import { isAdmin, logout } from "@/api/base44Client";
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [userData, setUserData] = useState(null);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const navigate = useNavigate();
   const location = useLocation();
   
   // Obter dados do usuário atual
-  const userData = getCurrentUser();
   const userIsAdmin = isAdmin();
   
   // Determinar a rota ativa
@@ -83,32 +85,55 @@ export default function Layout() {
     };
   }, [userMenuOpen, notificationsOpen]);
 
+  // Carregar dados do usuário
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const data = await UserEntity.me();
+        setUserData(data);
+      } catch (error) {
+        console.error("Erro ao carregar dados do usuário:", error);
+      }
+    };
+
+    loadUserData();
+  }, []);
+
+  // Handler para abrir/fechar notificações
+  const toggleNotifications = useCallback(() => {
+    console.log("Toggle notificações, estado atual:", notificationsOpen);
+    setNotificationsOpen(prevState => !prevState);
+  }, [notificationsOpen]);
+
   return (
     <div className="flex h-screen bg-background text-foreground">
       {/* Overlay para mobile */}
-      <div
-        className={`fixed inset-0 z-20 bg-black/80 backdrop-blur-sm transition-opacity lg:hidden ${
-          sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
-        onClick={() => setSidebarOpen(false)}
-      ></div>
+      <AnimatePresence>
+        {sidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-30 w-64 h-full glass transition-transform lg:translate-x-0 lg:static lg:z-auto ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-card border-r border-border transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:z-auto ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between px-6 py-5 border-b border-border">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-purple rounded-md flex items-center justify-center">
-                <span className="text-white font-bold text-sm">B</span>
+          <div className="flex items-center justify-between h-16 px-6 border-b border-border">
+            <Link to="/app" className="flex items-center">
+              <div className="w-8 h-8 rounded-md bg-gradient-purple flex items-center justify-center text-white font-bold text-lg">
+                B
               </div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-                BrandAI
-              </h1>
-            </div>
+              <span className="ml-2 text-xl font-bold text-foreground">BrandAI</span>
+            </Link>
             <button
               onClick={() => setSidebarOpen(false)}
               className="text-muted-foreground hover:text-foreground lg:hidden"
@@ -290,12 +315,15 @@ export default function Layout() {
 
             {/* Notificações */}
             <div className="relative notifications-container">
-              <NotificationIcon onClick={() => setNotificationsOpen(!notificationsOpen)} />
-              
-              <NotificationsPanel 
-                isOpen={notificationsOpen} 
-                onClose={() => setNotificationsOpen(false)} 
-              />
+              <button
+                onClick={toggleNotifications}
+                className="p-1.5 rounded-full bg-secondary hover:bg-secondary/80 text-foreground relative transition-colors"
+              >
+                <Bell size={18} />
+                <span className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center bg-primary text-primary-foreground text-[10px] font-bold rounded-full">
+                  2
+                </span>
+              </button>
             </div>
           </div>
         </header>
@@ -305,6 +333,15 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Painel de notificações (fora do fluxo normal do documento) */}
+      <NotificationsPanel 
+        isOpen={notificationsOpen} 
+        onClose={() => {
+          console.log("Fechando painel de notificações");
+          setNotificationsOpen(false);
+        }} 
+      />
     </div>
   );
 }

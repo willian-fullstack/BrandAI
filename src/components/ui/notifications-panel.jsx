@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Bell, Check, ChevronRight, Star, Info, X, AlertCircle } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import PropTypes from "prop-types";
+import { createPortal } from "react-dom";
 
 // Mock de notificações para demonstração
 const mockNotifications = [
@@ -32,23 +33,10 @@ const mockNotifications = [
   }
 ];
 
-// Hook para obter as notificações (poderia ser alterado para fetch de API real no futuro)
+// Hook para obter as notificações
 export const useNotifications = () => {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Simular carregamento de notificações
-    const loadNotifications = async () => {
-      setLoading(true);
-      // Simular delay de API
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setNotifications(mockNotifications);
-      setLoading(false);
-    };
-    
-    loadNotifications();
-  }, []);
+  const [notifications, setNotifications] = useState(mockNotifications);
+  const loading = false;
 
   const markAsRead = (id) => {
     setNotifications(prev => 
@@ -75,6 +63,7 @@ export const useNotifications = () => {
   };
 };
 
+// Componente principal do painel de notificações
 const NotificationsPanel = ({ isOpen, onClose }) => {
   const { 
     notifications, 
@@ -103,36 +92,45 @@ const NotificationsPanel = ({ isOpen, onClose }) => {
     const now = new Date();
     const diff = now - date;
     
-    // Menos de 1 hora
     if (diff < 1000 * 60 * 60) {
       const minutes = Math.floor(diff / (1000 * 60));
       return `${minutes} ${minutes === 1 ? 'minuto' : 'minutos'} atrás`;
     }
     
-    // Menos de 1 dia
     if (diff < 1000 * 60 * 60 * 24) {
       const hours = Math.floor(diff / (1000 * 60 * 60));
       return `${hours} ${hours === 1 ? 'hora' : 'horas'} atrás`;
     }
     
-    // Menos de 7 dias
     if (diff < 1000 * 60 * 60 * 24 * 7) {
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
       return `${days} ${days === 1 ? 'dia' : 'dias'} atrás`;
     }
     
-    // Formatar como data
     return date.toLocaleDateString('pt-BR');
   };
 
-  return (
-    <AnimatePresence>
-      {isOpen && (
+  if (!isOpen) return null;
+
+  console.log("Renderizando painel de notificações, isOpen:", isOpen);
+
+  return createPortal(
+    <>
+      {/* Overlay para fechar o painel quando clicar fora */}
+      <div 
+        className="fixed inset-0 bg-black/5 z-[1000]"
+        onClick={onClose}
+      />
+      
+      {/* Painel de notificações */}
+      <div 
+        className="fixed top-16 right-4 z-[1001] min-w-[320px] max-w-[400px]"
+      >
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 10 }}
-          className="absolute right-0 mt-2 w-80 sm:w-96 bg-card/95 backdrop-blur-md border border-border rounded-lg shadow-lg z-50 overflow-hidden"
+          className="bg-card/95 backdrop-blur-md border border-border rounded-lg shadow-lg overflow-hidden"
         >
           <div className="flex items-center justify-between p-4 border-b border-border">
             <div className="flex items-center">
@@ -147,13 +145,19 @@ const NotificationsPanel = ({ isOpen, onClose }) => {
               {unreadCount > 0 && (
                 <button 
                   className="text-xs text-primary hover:text-primary/80 hover:underline"
-                  onClick={markAllAsRead}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    markAllAsRead();
+                  }}
                 >
                   Marcar todas como lidas
                 </button>
               )}
               <button
-                onClick={onClose}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClose();
+                }}
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X className="w-4 h-4" />
@@ -176,7 +180,10 @@ const NotificationsPanel = ({ isOpen, onClose }) => {
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
-                    onClick={() => markAsRead(notification.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      markAsRead(notification.id);
+                    }}
                     className={`p-4 border-b border-border hover:bg-muted/50 cursor-pointer transition-colors ${
                       !notification.read ? 'bg-muted/30' : ''
                     }`}
@@ -199,7 +206,10 @@ const NotificationsPanel = ({ isOpen, onClose }) => {
                           <span className="text-xs text-muted-foreground">
                             {formatDate(notification.createdAt)}
                           </span>
-                          <button className="flex items-center text-xs text-primary hover:text-primary/80">
+                          <button 
+                            className="flex items-center text-xs text-primary hover:text-primary/80"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             Ver detalhes <ChevronRight className="w-3 h-3 ml-1" />
                           </button>
                         </div>
@@ -222,42 +232,23 @@ const NotificationsPanel = ({ isOpen, onClose }) => {
           </div>
           
           <div className="p-3 border-t border-border bg-card/95">
-            <button className="w-full text-center text-sm text-primary hover:text-primary/80 hover:underline py-1">
+            <button 
+              className="w-full text-center text-sm text-primary hover:text-primary/80 hover:underline py-1"
+              onClick={(e) => e.stopPropagation()}
+            >
               Ver todas as notificações
             </button>
           </div>
         </motion.div>
-      )}
-    </AnimatePresence>
+      </div>
+    </>,
+    document.body
   );
 };
 
 NotificationsPanel.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired
-};
-
-// Componente de ícone de notificação animado
-export const NotificationIcon = ({ onClick }) => {
-  const { unreadCount } = useNotifications();
-  
-  return (
-    <button
-      onClick={onClick}
-      className="p-1.5 rounded-full bg-secondary hover:bg-secondary/80 text-foreground relative transition-colors"
-    >
-      <Bell size={18} />
-      {unreadCount > 0 && (
-        <span className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center bg-primary text-primary-foreground text-[10px] font-bold rounded-full">
-          {unreadCount > 9 ? '9+' : unreadCount}
-        </span>
-      )}
-    </button>
-  );
-};
-
-NotificationIcon.propTypes = {
-  onClick: PropTypes.func.isRequired
 };
 
 export default NotificationsPanel; 
