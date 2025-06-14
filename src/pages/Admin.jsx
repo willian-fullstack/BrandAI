@@ -364,16 +364,98 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
 
   const handleSalvarConfigPlanos = async () => {
     try {
-      if (configPlanos.id) {
-        await ConfiguracaoPlanos.update(configPlanos.id, configPlanos);
-      } else {
-        const createdConfig = await ConfiguracaoPlanos.create(configPlanos);
-        setConfigPlanos(createdConfig);
+      setLoading(true);
+      
+      // Converter valores para número, garantindo que não sejam strings
+      const configPlanosFormatado = {
+        ...configPlanos,
+        plano_basico_preco_mensal: Number(configPlanos.plano_basico_preco_mensal || 67),
+        plano_basico_preco_anual: Number(configPlanos.plano_basico_preco_anual || 597),
+        plano_intermediario_preco_mensal: Number(configPlanos.plano_intermediario_preco_mensal || 97),
+        plano_intermediario_preco_anual: Number(configPlanos.plano_intermediario_preco_anual || 897),
+        plano_premium_preco_mensal: Number(configPlanos.plano_premium_preco_mensal || 197),
+        plano_premium_preco_anual: Number(configPlanos.plano_premium_preco_anual || 1997)
+      };
+      
+      console.log("Salvando configurações de planos:", configPlanosFormatado);
+      
+      try {
+        // Primeiro, buscar todas as configurações existentes
+        const todasConfiguracoes = await ConfiguracaoPlanos.getAll();
+        
+        if (configPlanosFormatado.id) {
+          // Se já temos um ID, atualizamos diretamente
+          await ConfiguracaoPlanos.update(configPlanosFormatado.id, configPlanosFormatado);
+          setNotificacao({
+            tipo: 'sucesso',
+            mensagem: 'Configurações de planos atualizadas com sucesso!'
+          });
+        } else if (todasConfiguracoes && todasConfiguracoes.length > 0) {
+          // Se não temos ID mas existem configurações, atualizamos a primeira encontrada
+          const primeiraConfig = todasConfiguracoes[0];
+          console.log("Atualizando configuração existente:", primeiraConfig._id);
+          
+          await ConfiguracaoPlanos.update(primeiraConfig._id, {
+            ...configPlanosFormatado,
+            // Manter os campos originais que não estamos alterando
+            codigo: primeiraConfig.codigo,
+            nome: primeiraConfig.nome,
+            descricao: primeiraConfig.descricao,
+            ativo: primeiraConfig.ativo,
+            recursos: primeiraConfig.recursos || []
+          });
+          
+          setNotificacao({
+            tipo: 'sucesso',
+            mensagem: 'Configurações de planos atualizadas com sucesso!'
+          });
+        } else {
+          // Se não existem configurações, criamos uma nova
+          const novaConfiguracao = {
+            codigo: 'config-principal',
+            nome: 'Configuração Principal',
+            descricao: 'Configuração principal de planos do sistema',
+            preco_mensal: configPlanosFormatado.plano_basico_preco_mensal,
+            preco_anual: configPlanosFormatado.plano_basico_preco_anual,
+            limite_conversas_diarias: 100,
+            limite_mensagens_por_conversa: 100,
+            plano_basico_preco_mensal: configPlanosFormatado.plano_basico_preco_mensal,
+            plano_basico_preco_anual: configPlanosFormatado.plano_basico_preco_anual,
+            plano_intermediario_preco_mensal: configPlanosFormatado.plano_intermediario_preco_mensal,
+            plano_intermediario_preco_anual: configPlanosFormatado.plano_intermediario_preco_anual,
+            plano_premium_preco_mensal: configPlanosFormatado.plano_premium_preco_mensal,
+            plano_premium_preco_anual: configPlanosFormatado.plano_premium_preco_anual,
+            recursos_inclusos: [],
+            recursos_exclusivos: [],
+            agentes_disponiveis: []
+          };
+          
+          console.log("Criando nova configuração de planos:", novaConfiguracao);
+          const createdConfig = await ConfiguracaoPlanos.create(novaConfiguracao);
+          setConfigPlanos(createdConfig);
+          setNotificacao({
+            tipo: 'sucesso',
+            mensagem: 'Configurações de planos criadas com sucesso!'
+          });
+        }
+      } catch (apiError) {
+        console.error("Erro na API:", apiError);
+        setNotificacao({
+          tipo: 'erro',
+          mensagem: `Erro na API: ${apiError.message || 'Erro desconhecido'}`
+        });
       }
-      alert("Configurações de planos salvas com sucesso!");
+      
+      // Recarregar dados para garantir que estamos com os valores mais atualizados
+      await loadConfigPlanos();
     } catch (error) {
-      console.error("Erro ao salvar config de planos:", error);
-      alert("Erro ao salvar configurações de planos.");
+      console.error("Erro ao salvar configurações de planos:", error);
+      setNotificacao({
+        tipo: 'erro',
+        mensagem: `Erro ao salvar configurações de planos: ${error.message || 'Erro desconhecido'}`
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -405,34 +487,18 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
     }
   };
 
-  const atualizarConfigPlanos = async (e) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      
-      // Verificar se já existe uma configuração
-      if (configPlanos.id) {
-        await ConfiguracaoPlanos.update(configPlanos.id, configPlanos);
-      } else {
-        await ConfiguracaoPlanos.create(configPlanos);
-      }
-      
-      // Recarregar dados
-      await loadConfigPlanos();
-      
-      setNotificacao({
-        tipo: 'sucesso',
-        mensagem: 'Configurações de planos atualizadas com sucesso!'
-      });
-    } catch (error) {
-      console.error('Erro ao atualizar configurações de planos:', error);
-      setNotificacao({
-        tipo: 'erro',
-        mensagem: `Erro ao atualizar planos: ${error.message || 'Erro desconhecido'}`
-      });
-    } finally {
-      setLoading(false);
-    }
+  const atualizarConfigPlanos = (e) => {
+    const { name, value } = e.target;
+    
+    // Garantir que o valor seja um número quando for um campo numérico
+    const valorProcessado = name.includes('preco') ? 
+      (value === '' ? '' : Number(value)) : 
+      value;
+    
+    setConfigPlanos(prev => ({
+      ...prev,
+      [name]: valorProcessado
+    }));
   };
 
   const handleExcluirDocumento = async (agenteConfig, documentoId) => {
@@ -676,12 +742,56 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
   // Função para carregar configurações de planos
   const loadConfigPlanos = async () => {
     try {
-      const planosData = await ConfiguracaoPlanos.getAll();
-      if (planosData && planosData.length > 0) {
-        setConfigPlanos(planosData[0]);
+      const configsPlanos = await ConfiguracaoPlanos.getAll();
+      
+      if (configsPlanos && configsPlanos.length > 0) {
+        // Usar a primeira configuração encontrada
+        const config = configsPlanos[0];
+        console.log("Configuração de planos carregada:", config);
+        
+        setConfigPlanos({
+          id: config._id || config.id,
+          plano_basico_preco_mensal: config.plano_basico_preco_mensal || 67,
+          plano_basico_preco_anual: config.plano_basico_preco_anual || 597,
+          plano_intermediario_preco_mensal: config.plano_intermediario_preco_mensal || 97,
+          plano_intermediario_preco_anual: config.plano_intermediario_preco_anual || 897,
+          plano_premium_preco_mensal: config.plano_premium_preco_mensal || 197,
+          plano_premium_preco_anual: config.plano_premium_preco_anual || 1997,
+          descontoAfiliados: config.descontoAfiliados || 10,
+          periodoPadrao: config.periodoPadrao || 'mensal'
+        });
+      } else {
+        console.log("Nenhuma configuração de planos encontrada, usando valores padrão");
+        // Definir valores padrão
+        setConfigPlanos({
+          plano_basico_preco_mensal: 67,
+          plano_basico_preco_anual: 597,
+          plano_intermediario_preco_mensal: 97,
+          plano_intermediario_preco_anual: 897,
+          plano_premium_preco_mensal: 197,
+          plano_premium_preco_anual: 1997,
+          descontoAfiliados: 10,
+          periodoPadrao: 'mensal'
+        });
       }
     } catch (error) {
       console.error("Erro ao carregar configurações de planos:", error);
+      setNotificacao({
+        tipo: 'erro',
+        mensagem: `Erro ao carregar configurações de planos: ${error.message || 'Erro desconhecido'}`
+      });
+      
+      // Definir valores padrão em caso de erro
+      setConfigPlanos({
+        plano_basico_preco_mensal: 67,
+        plano_basico_preco_anual: 597,
+        plano_intermediario_preco_mensal: 97,
+        plano_intermediario_preco_anual: 897,
+        plano_premium_preco_mensal: 197,
+        plano_premium_preco_anual: 1997,
+        descontoAfiliados: 10,
+        periodoPadrao: 'mensal'
+      });
     }
   };
 

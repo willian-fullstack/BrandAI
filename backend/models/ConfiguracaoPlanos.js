@@ -6,7 +6,7 @@ const configuracaoPlanosSchema = mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      enum: ['free', 'basic', 'pro', 'enterprise'],
+      enum: ['free', 'basic', 'pro', 'enterprise', 'config-principal'],
     },
     nome: {
       type: String,
@@ -23,6 +23,45 @@ const configuracaoPlanosSchema = mongoose.Schema(
     preco_anual: {
       type: Number,
       required: true,
+    },
+    // Novos campos para preços específicos de cada plano
+    plano_basico_preco_mensal: {
+      type: Number,
+      default: 67,
+    },
+    plano_basico_preco_anual: {
+      type: Number,
+      default: 597,
+    },
+    plano_intermediario_preco_mensal: {
+      type: Number,
+      default: 97,
+    },
+    plano_intermediario_preco_anual: {
+      type: Number,
+      default: 897,
+    },
+    plano_premium_preco_mensal: {
+      type: Number,
+      default: 197,
+    },
+    plano_premium_preco_anual: {
+      type: Number,
+      default: 1997,
+    },
+    // Campos adicionais
+    descontoAfiliados: {
+      type: Number,
+      default: 10,
+    },
+    periodoPadrao: {
+      type: String,
+      default: 'mensal',
+      enum: ['mensal', 'anual'],
+    },
+    diasTesteGratis: {
+      type: Number,
+      default: 7,
     },
     moeda: {
       type: String,

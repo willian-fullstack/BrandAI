@@ -4,7 +4,7 @@ import { ConfiguracaoPlanos } from "@/api/entities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { 
   Check, 
@@ -28,16 +28,25 @@ export default function Planos() {
     plano_basico_preco_mensal: 67,
     plano_basico_preco_anual: 597,
     plano_intermediario_preco_mensal: 97,
-    plano_intermediario_preco_anual: 870,
-    plano_premium_preco_mensal: 127,
+    plano_intermediario_preco_anual: 897,
+    plano_premium_preco_mensal: 197,
     plano_premium_preco_anual: 997
   });
   const navigate = useNavigate();
+  const location = useLocation();
   const userIsAdmin = isAdmin();
 
   useEffect(() => {
     loadData();
-  }, []);
+    // Forçar recarregamento dos dados quando a página é acessada
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        loadData();
+      }
+    }, 5000); // Verificar a cada 5 segundos
+
+    return () => clearInterval(interval);
+  }, [location.key]); // Recarregar quando a URL muda
 
   const loadData = async () => {
     try {
@@ -57,9 +66,22 @@ export default function Planos() {
 
       // Carregar configurações de preços
       try {
-        const planosDataResults = await ConfiguracaoPlanos.list();
+        const planosDataResults = await ConfiguracaoPlanos.getAll();
+        console.log("Configurações de planos carregadas:", planosDataResults);
+        
         if (planosDataResults && planosDataResults.length > 0) {
-          setConfigPlanos(planosDataResults[0]);
+          const configData = planosDataResults[0];
+          console.log("Configuração selecionada:", configData);
+          
+          // Atualizar o estado com os valores carregados
+          setConfigPlanos({
+            plano_basico_preco_mensal: configData.plano_basico_preco_mensal || 67,
+            plano_basico_preco_anual: configData.plano_basico_preco_anual || 597,
+            plano_intermediario_preco_mensal: configData.plano_intermediario_preco_mensal || 97,
+            plano_intermediario_preco_anual: configData.plano_intermediario_preco_anual || 897,
+            plano_premium_preco_mensal: configData.plano_premium_preco_mensal || 197,
+            plano_premium_preco_anual: configData.plano_premium_preco_anual || 997
+          });
         }
       } catch (error) {
         console.warn("Usando preços padrão, erro ao carregar configurações de planos:", error);
@@ -98,9 +120,9 @@ export default function Planos() {
       nome: 'Intermediário',
       subtitulo: 'Mais Vendido 🔥',
       preco_mensal: configPlanos.plano_intermediario_preco_mensal || 97,
-      preco_anual: configPlanos.plano_intermediario_preco_anual || 870,
-      economia: (configPlanos.plano_intermediario_preco_mensal * 12) - (configPlanos.plano_intermediario_preco_anual || 870),
-      meses_gratis: ((configPlanos.plano_intermediario_preco_mensal * 12) - (configPlanos.plano_intermediario_preco_anual || 870)) / (configPlanos.plano_intermediario_preco_mensal || 97),
+      preco_anual: configPlanos.plano_intermediario_preco_anual || 897,
+      economia: (configPlanos.plano_intermediario_preco_mensal * 12) - (configPlanos.plano_intermediario_preco_anual || 897),
+      meses_gratis: ((configPlanos.plano_intermediario_preco_mensal * 12) - (configPlanos.plano_intermediario_preco_anual || 897)) / (configPlanos.plano_intermediario_preco_mensal || 97),
       agentes_inclusos: 7,
       cor: 'from-purple-500 to-indigo-600',
       popular: true,
@@ -119,10 +141,10 @@ export default function Planos() {
       id: 'premium',
       nome: 'Avançado',
       subtitulo: 'Para quem leva a sério 🚀',
-      preco_mensal: configPlanos.plano_premium_preco_mensal || 127,
+      preco_mensal: configPlanos.plano_premium_preco_mensal || 197,
       preco_anual: configPlanos.plano_premium_preco_anual || 997,
       economia: (configPlanos.plano_premium_preco_mensal * 12) - (configPlanos.plano_premium_preco_anual || 997),
-      meses_gratis: ((configPlanos.plano_premium_preco_mensal * 12) - (configPlanos.plano_premium_preco_anual || 997)) / (configPlanos.plano_premium_preco_mensal || 127),
+      meses_gratis: ((configPlanos.plano_premium_preco_mensal * 12) - (configPlanos.plano_premium_preco_anual || 997)) / (configPlanos.plano_premium_preco_mensal || 197),
       agentes_inclusos: 11,
       cor: 'from-yellow-400 to-orange-500',
       popular: false,
