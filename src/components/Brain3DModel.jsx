@@ -6,18 +6,23 @@ import * as THREE from 'three';
 import PropTypes from 'prop-types';
 
 // Caminho do modelo 3D
-const MODEL_PATH = '/3d/brain_hologram.glb';
+const MODEL_PATH = '3d/brain_hologram.glb';
 
 // Componente do cérebro que carrega o modelo GLB
 function BrainModel({ isHovered }) {
-  const gltf = useLoader(GLTFLoader, MODEL_PATH);
+  const [hasError, setHasError] = useState(false);
+  const gltf = useLoader(GLTFLoader, MODEL_PATH, undefined, (error) => {
+    console.error("Erro ao carregar o modelo 3D:", error);
+    setHasError(true);
+  });
+  
   const modelRef = useRef();
   const { scene } = useThree();
   const [mousePosition, setMousePosition] = useState([0, 0]);
   
   // Clonar o modelo na primeira renderização
   useEffect(() => {
-    if (!gltf) return;
+    if (!gltf || hasError) return;
     
     const clonedScene = gltf.scene.clone();
     
@@ -47,7 +52,7 @@ function BrainModel({ isHovered }) {
     return () => {
       scene.remove(clonedScene);
     };
-  }, [gltf, scene]);
+  }, [gltf, scene, hasError]);
   
   // Atualizar material quando isHovered mudar
   useEffect(() => {
@@ -120,12 +125,7 @@ BrainModel.propTypes = {
 
 // Componente de fallback para quando o modelo estiver carregando
 function LoadingFallback() {
-  return (
-    <mesh>
-      <sphereGeometry args={[1, 16, 16]} />
-      <meshStandardMaterial color="#8a2be2" wireframe />
-    </mesh>
-  );
+  return null; // Removida a esfera de carregamento
 }
 
 // Componente principal que renderiza o Canvas 3D como background
