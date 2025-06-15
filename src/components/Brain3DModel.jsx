@@ -4,9 +4,10 @@ import { OrbitControls } from '@react-three/drei';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import * as THREE from 'three';
 import PropTypes from 'prop-types';
+import ErrorBoundary from './ErrorBoundary';
 
 // Caminho do modelo 3D
-const MODEL_PATH = '3d/brain_hologram.glb';
+const MODEL_PATH = '/3d/brain_hologram.glb';
 
 // Componente do cérebro que carrega o modelo GLB
 function BrainModel({ isHovered }) {
@@ -132,35 +133,52 @@ function LoadingFallback() {
 export default function Brain3DViewer() {
   const [isHovered, setIsHovered] = useState(false);
   
-  return (
-    <Canvas 
-      camera={{ position: [0, 0, 6], fov: 50 }}
+  // Fallback simples para quando houver erro
+  const errorFallback = (
+    <div 
       style={{ 
         position: 'absolute', 
         top: 0, 
         left: 0, 
         width: '100%', 
         height: '100%',
+        background: 'linear-gradient(to bottom, #000000, #1a0033)',
         zIndex: 0 
       }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <color attach="background" args={['#000000']} />
-      <fog attach="fog" args={['#000', 5, 20]} />
-      <ambientLight intensity={0.3} />
-      <directionalLight position={[5, 5, 5]} intensity={0.8} />
-      <pointLight position={[-5, -5, -5]} intensity={0.5} color="#9c27b0" />
-      
-      <Suspense fallback={<LoadingFallback />}>
-        <BrainModel isHovered={isHovered} />
-      </Suspense>
-      
-      <OrbitControls 
-        enableZoom={false} 
-        enablePan={false}
-        enableRotate={false}
-      />
-    </Canvas>
+    />
+  );
+  
+  return (
+    <ErrorBoundary fallback={errorFallback}>
+      <Canvas 
+        camera={{ position: [0, 0, 6], fov: 50 }}
+        style={{ 
+          position: 'absolute', 
+          top: 0, 
+          left: 0, 
+          width: '100%', 
+          height: '100%',
+          zIndex: 0 
+        }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <color attach="background" args={['#000000']} />
+        <fog attach="fog" args={['#000', 5, 20]} />
+        <ambientLight intensity={0.3} />
+        <directionalLight position={[5, 5, 5]} intensity={0.8} />
+        <pointLight position={[-5, -5, -5]} intensity={0.5} color="#9c27b0" />
+        
+        <Suspense fallback={<LoadingFallback />}>
+          <BrainModel isHovered={isHovered} />
+        </Suspense>
+        
+        <OrbitControls 
+          enableZoom={false} 
+          enablePan={false}
+          enableRotate={false}
+        />
+      </Canvas>
+    </ErrorBoundary>
   );
 } 
