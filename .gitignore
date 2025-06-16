@@ -46,3 +46,4 @@ backend/.env.*
 /backend/uploads/*
 !/uploads/.gitkeep
 !/backend/uploads/.gitkeep
+.vercel

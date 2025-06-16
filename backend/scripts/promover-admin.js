@@ -2,9 +2,20 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import colors from 'colors';
 import User from '../models/User.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import process from 'process';
 
 // Carregar variáveis de ambiente
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+if (!process.env.MONGO_URI) {
+  console.error('Erro: MONGO_URI não encontrado no arquivo .env!'.red.bold);
+  process.exit(1);
+}
 
 // Conectar ao MongoDB
 mongoose

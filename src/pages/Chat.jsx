@@ -66,6 +66,20 @@ export default function Chat() {
     }
   }, [conversa]);
 
+  // Função para normalizar mensagens, garantindo que tipo e remetente estejam definidos
+  const normalizarMensagem = (mensagem) => {
+    // Se não tem tipo, mas tem remetente, usar remetente como tipo
+    const tipo = mensagem.tipo || mensagem.remetente || 'agente';
+    // Se não tem remetente, mas tem tipo, usar tipo como remetente
+    const remetente = mensagem.remetente || mensagem.tipo || 'agente';
+    
+    return {
+      ...mensagem,
+      tipo,
+      remetente
+    };
+  };
+
   const loadData = async () => {
     try {
       const userData = await User.me();
@@ -122,7 +136,7 @@ export default function Chat() {
             }
             
             setConversa(conversaData);
-            setMensagens(conversaData.mensagens || []);
+            setMensagens((conversaData.mensagens || []).map(normalizarMensagem));
 
             // Carregar configuração do agente para conversa existente
             try {
@@ -288,12 +302,12 @@ export default function Chat() {
       }
     }
 
-    const mensagemUsuario = {
+    const mensagemUsuario = normalizarMensagem({
       tipo: "usuario",
       conteudo: novaMensagem.trim(),
       remetente: "usuario",
       timestamp: new Date().toISOString()
-    };
+    });
 
     const novasMensagens = [...mensagens, mensagemUsuario];
     setMensagens(novasMensagens);
@@ -313,12 +327,12 @@ export default function Chat() {
       
       // Se não há documentos e não há prompt no arquivo de configuração, não pode responder
       if (!temDocumentos && !promptDoArquivoConfig) {
-        const mensagemErro = {
+        const mensagemErro = normalizarMensagem({
           tipo: "agente",
           conteudo: "Desculpe, este agente não está configurado corretamente. Entre em contato com o suporte.",
           remetente: "sistema",
           timestamp: new Date().toISOString()
-        };
+        });
         setMensagens([...novasMensagens, mensagemErro]);
         setCarregando(false);
         return;
@@ -380,12 +394,12 @@ export default function Chat() {
 
       // Processar resposta
       if (resposta && resposta.resposta) {
-        const mensagemAgente = {
+        const mensagemAgente = normalizarMensagem({
           tipo: "agente",
           conteudo: resposta.resposta,
           remetente: "agente",
           timestamp: new Date().toISOString()
-        };
+        });
 
         const mensagensAtualizadas = [...novasMensagens, mensagemAgente];
         setMensagens(mensagensAtualizadas);
@@ -419,12 +433,12 @@ export default function Chat() {
       }
     } catch (error) {
       console.error("Erro ao enviar mensagem:", error);
-      const mensagemErro = {
+      const mensagemErro = normalizarMensagem({
         tipo: "agente",
         conteudo: "Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente mais tarde.",
         remetente: "sistema",
         timestamp: new Date().toISOString()
-      };
+      });
       setMensagens([...novasMensagens, mensagemErro]);
     } finally {
       setCarregando(false);
@@ -443,15 +457,15 @@ export default function Chat() {
     console.log("URL da imagem gerada:", cleanUrl);
 
     // Criar mensagem do usuário com o prompt
-    const mensagemUsuario = {
+    const mensagemUsuario = normalizarMensagem({
       tipo: "usuario",
       conteudo: `Gere uma imagem: ${prompt}`,
       remetente: "usuario",
       timestamp: new Date().toISOString()
-    };
+    });
 
     // Criar mensagem do agente com a imagem em formato JSON
-    const mensagemAgente = {
+    const mensagemAgente = normalizarMensagem({
       tipo: "agente",
       conteudo: JSON.stringify({
         image_url: cleanUrl,
@@ -459,7 +473,7 @@ export default function Chat() {
       }),
       remetente: "agente",
       timestamp: new Date().toISOString()
-    };
+    });
 
     const novasMensagens = [...mensagens, mensagemUsuario, mensagemAgente];
     setMensagens(novasMensagens);
@@ -531,7 +545,11 @@ export default function Chat() {
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Cabeçalho */}
-      <header className="border-b border-border py-3 px-4 flex items-center justify-between z-10">
+      <header className={`fixed top-16 border-b border-border py-3 flex items-center justify-between z-10 bg-background ${
+        conversa?.agente_id?.toLowerCase().includes('designer') && showDesignerPanel 
+          ? 'lg:w-[calc(60%-1px)] lg:left-64 left-0 right-0 border-r border-border px-4' 
+          : 'lg:left-64 left-0 right-0 px-4'
+      }`}>
         <div className="flex items-center">
           <Button 
             variant="ghost" 
@@ -612,15 +630,15 @@ export default function Chat() {
       </header>
 
       {/* Área principal - Layout em duas colunas quando for Designer IA */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden pt-16">
         {/* Coluna da conversa (sempre presente) */}
         <div className={`flex flex-col ${
           conversa?.agente_id?.toLowerCase().includes('designer') && showDesignerPanel 
             ? 'w-3/5 border-r border-border' 
             : 'w-full'
-        }`}>
+        } lg:ml-0 relative`}>
           {/* Área de mensagens com rolagem */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-6">
+          <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-28">
             {/* Mensagem de boas-vindas */}
             {mensagens.length === 0 && (
               <div className="flex justify-center py-8">
@@ -661,42 +679,49 @@ export default function Chat() {
 
             {/* Lista de mensagens */}
             <AnimatePresence>
-              {mensagens.map((mensagem, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className={`flex ${mensagem.tipo === "usuario" ? "justify-end" : "justify-start"}`}
-                >
-                  <div 
-                    className={`max-w-[80%] md:max-w-[70%] rounded-lg p-3 ${
-                      mensagem.tipo === "usuario" 
-                        ? "bg-primary text-primary-foreground" 
-                        : "bg-card border border-border"
-                    }`}
+              {mensagens.map((mensagem, index) => {
+                const isUserMessage = mensagem.tipo === "usuario";
+                return (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className={`flex ${isUserMessage ? "justify-end pr-2" : "justify-start pl-2"} mb-4`}
                   >
-                    <div className="flex items-center gap-2 mb-1">
-                      <div className="w-6 h-6 rounded-full flex items-center justify-center">
-                        {mensagem.tipo === "usuario" ? (
-                          <UserIcon className="w-4 h-4" />
-                        ) : (
-                          <Bot className="w-4 h-4" />
-                        )}
+                    <div 
+                      className={`max-w-[85%] md:max-w-[70%] rounded-lg p-4 shadow-sm ${
+                        isUserMessage 
+                          ? "bg-primary text-primary-foreground border border-primary/30" 
+                          : "bg-card border border-border"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                          isUserMessage
+                            ? "bg-primary-foreground/20"
+                            : "bg-primary/20"
+                        }`}>
+                          {isUserMessage ? (
+                            <UserIcon className={`w-4 h-4 ${isUserMessage ? "text-primary-foreground" : "text-primary"}`} />
+                          ) : (
+                            <Bot className="w-4 h-4 text-primary" />
+                          )}
+                        </div>
+                        <p className="text-sm font-medium">
+                          {isUserMessage ? "Você" : agenteAtual.nome}
+                        </p>
+                        <p className="text-xs ml-auto opacity-70">
+                          {formatarData(mensagem.timestamp)}
+                        </p>
                       </div>
-                      <p className="text-sm font-medium">
-                        {mensagem.tipo === "usuario" ? "Você" : agenteAtual.nome}
-                      </p>
-                      <p className="text-xs ml-auto opacity-70">
-                        {formatarData(mensagem.timestamp)}
-                      </p>
+                      <div className="mt-2">
+                        {formatMessageContent(mensagem.conteudo)}
+                      </div>
                     </div>
-                    <div className="mt-1">
-                      {formatMessageContent(mensagem.conteudo)}
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
 
             {/* Indicador de digitação */}
@@ -704,14 +729,14 @@ export default function Chat() {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex justify-start"
+                className="flex justify-start pl-2 mb-4"
               >
-                <div className="glass-card rounded-2xl p-4 max-w-[85%] md:max-w-[70%]">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center mr-2">
+                <div className="bg-card border border-border rounded-lg p-4 shadow-sm max-w-[85%] md:max-w-[70%]">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
                       <Bot className="h-4 w-4 text-primary" />
                     </div>
-                    <div className="text-sm">{agenteAtual.nome || "Agente"}</div>
+                    <div className="text-sm font-medium">{agenteAtual.nome || "Agente"}</div>
                   </div>
                   <div className="mt-2 flex space-x-2">
                     <div className="w-2 h-2 rounded-full bg-primary/60 animate-bounce" style={{ animationDelay: "0ms" }}></div>
@@ -727,40 +752,46 @@ export default function Chat() {
           </div>
 
           {/* Área de entrada de mensagem (sempre fixo no fundo) */}
-          <div className="border-t border-border p-4">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                enviarMensagem();
-              }}
-              className="flex gap-2"
-            >
-              <Input
-                value={novaMensagem}
-                onChange={(e) => setNovaMensagem(e.target.value)}
-                placeholder="Digite sua mensagem..."
-                className="flex-1 bg-secondary border-border focus:border-primary"
-                disabled={carregando}
-              />
-              <Button
-                type="submit"
-                disabled={!novaMensagem.trim() || carregando}
-                className="bg-primary hover:bg-primary/90"
+          <div className={`border-t border-border p-4 fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-10 shadow-lg ${
+            conversa?.agente_id?.toLowerCase().includes('designer') && showDesignerPanel 
+              ? 'lg:left-64 lg:w-[calc(60%-1px)] lg:right-auto' 
+              : 'lg:left-64'
+          }`}>
+            <div className="w-full">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  enviarMensagem();
+                }}
+                className="flex gap-2 w-full"
               >
-                {carregando ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <Send className="h-5 w-5" />
+                <Input
+                  value={novaMensagem}
+                  onChange={(e) => setNovaMensagem(e.target.value)}
+                  placeholder="Digite sua mensagem..."
+                  className="flex-1 bg-secondary border-border focus:border-primary"
+                  disabled={carregando}
+                />
+                <Button
+                  type="submit"
+                  disabled={!novaMensagem.trim() || carregando}
+                  className="bg-primary hover:bg-primary/90 flex-shrink-0"
+                >
+                  {carregando ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Send className="h-5 w-5" />
+                  )}
+                </Button>
+              </form>
+              <div className="mt-2 text-xs text-muted-foreground text-center">
+                {user?.role !== 'admin' && (
+                  <div className="flex items-center justify-center gap-1">
+                    <Sparkles className="h-3 w-3 text-primary" />
+                    <span>Créditos disponíveis: {user?.creditos_restantes || 0}</span>
+                  </div>
                 )}
-              </Button>
-            </form>
-            <div className="mt-2 text-xs text-muted-foreground text-center">
-              {user?.role !== 'admin' && (
-                <div className="flex items-center justify-center gap-1">
-                  <Sparkles className="h-3 w-3 text-primary" />
-                  <span>Créditos disponíveis: {user?.creditos_restantes || 0}</span>
-                </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
