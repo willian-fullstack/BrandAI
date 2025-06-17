@@ -381,4 +381,114 @@ Para configurar rapidamente os preços originais, você pode usar o script `scri
 
 ### Cupons de Desconto
 
-O sistema de cupons permite oferecer descontos especiais aos usuários. Cada cupom possui: 
+O sistema de cupons permite oferecer descontos especiais aos usuários. Cada cupom possui:
+
+## Configuração Avançada de Planos
+
+### Visão Geral
+
+O sistema agora oferece configurações avançadas para os planos, permitindo:
+
+1. **Ativar/Desativar Plano Anual**: Opção para mostrar ou ocultar a opção de pagamento anual
+2. **Editar Recursos de Cada Plano**: Personalização completa das descrições dos recursos de cada plano
+
+### Modelo de Dados
+
+O modelo `ConfiguracaoPlanos` foi estendido com os seguintes campos:
+
+#### Controle de Plano Anual:
+- `plano_anual_ativo`: Booleano que indica se o plano anual está disponível (default: true)
+
+#### Recursos Personalizáveis por Plano:
+- `recursos_planos`: Objeto contendo arrays de recursos para cada plano:
+  - `basico`: Array de strings com os recursos do plano básico
+  - `intermediario`: Array de strings com os recursos do plano intermediário
+  - `premium`: Array de strings com os recursos do plano premium
+
+### Interface de Administração
+
+No painel administrativo, na aba "Planos", os administradores podem:
+
+1. **Configurar Disponibilidade do Plano Anual**:
+   - Ativar/desativar a opção de pagamento anual através de um checkbox
+   - Quando desativado, apenas os preços mensais serão exibidos na página de planos
+
+2. **Editar Recursos de Cada Plano**:
+   - Interface de edição de texto com um recurso por linha
+   - Edição independente para cada plano (básico, intermediário e premium)
+   - As alterações são refletidas imediatamente na página de planos
+
+### Comportamento no Frontend
+
+Na página de Planos, o sistema se comporta da seguinte forma:
+
+1. **Plano Anual Desativado**:
+   - O toggle entre plano mensal e anual não é exibido
+   - Apenas os preços mensais são mostrados
+   - O usuário não tem a opção de escolher o plano anual
+
+2. **Recursos Personalizados**:
+   - Os recursos exibidos para cada plano são exatamente os definidos no painel administrativo
+   - Se nenhum recurso for definido, o sistema usa valores padrão pré-configurados
+
+### Implementação Técnica
+
+1. **Verificação de Plano Anual**:
+   ```jsx
+   {configPlanos.plano_anual_ativo !== false && (
+     <div className="inline-flex items-center bg-card border border-border p-1 rounded-full backdrop-blur-sm shadow-lg mx-auto mb-6">
+       {/* Toggle de plano anual/mensal */}
+     </div>
+   )}
+   ```
+
+2. **Exibição de Recursos Personalizados**:
+   ```jsx
+   const planos = [
+     {
+       id: 'basico',
+       // ...outros campos
+       recursos: configPlanos.recursos_planos?.basico || [
+         // recursos padrão caso não haja personalização
+       ]
+     },
+     // outros planos
+   ];
+   ```
+
+3. **Edição de Recursos no Painel Admin**:
+   ```jsx
+   <Textarea
+     name="recursos_planos_basico"
+     value={(configPlanos?.recursos_planos?.basico || [
+       // valores padrão
+     ]).join('\n')}
+     onChange={(e) => {
+       const recursos = e.target.value.split('\n').filter(item => item.trim() !== '');
+       setConfigPlanos({
+         ...configPlanos,
+         recursos_planos: {
+           ...(configPlanos.recursos_planos || {}),
+           basico: recursos
+         }
+       });
+     }}
+     placeholder="Digite um recurso por linha"
+     className="min-h-[150px]"
+   />
+   ```
+
+### Considerações Importantes
+
+1. **Migração de Dados**:
+   - Ao atualizar para esta versão, os recursos padrão serão usados até que sejam personalizados
+   - Não é necessário configurar manualmente os recursos para cada plano se os padrões forem adequados
+
+2. **Compatibilidade**:
+   - A desativação do plano anual afeta apenas a interface do usuário, não altera planos existentes
+   - Usuários que já possuem planos anuais continuarão com seus planos normalmente
+
+3. **Boas Práticas**:
+   - Mantenha os recursos concisos e diretos para melhor legibilidade
+   - Use linguagem consistente entre os diferentes planos
+   - Destaque claramente as diferenças entre os planos 

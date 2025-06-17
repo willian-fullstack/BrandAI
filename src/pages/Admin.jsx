@@ -786,7 +786,9 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
           plano_premium_preco_original_mensal: config.plano_premium_preco_original_mensal || 0,
           plano_premium_preco_original_anual: config.plano_premium_preco_original_anual || 0,
           // Cupons
-          cupons: Array.isArray(config.cupons) ? config.cupons : []
+          cupons: Array.isArray(config.cupons) ? config.cupons : [],
+          plano_anual_ativo: config.plano_anual_ativo || false,
+          recursos_planos: config.recursos_planos || {}
         });
       } else {
         console.log("Nenhuma configuração de planos encontrada, usando valores padrão");
@@ -803,7 +805,9 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
           oferta_ativa: false,
           oferta_titulo: '',
           oferta_descricao: '',
-          cupons: []
+          cupons: [],
+          plano_anual_ativo: false,
+          recursos_planos: {}
         });
       }
     } catch (error) {
@@ -826,7 +830,9 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
         oferta_ativa: false,
         oferta_titulo: '',
         oferta_descricao: '',
-        cupons: []
+        cupons: [],
+        plano_anual_ativo: false,
+        recursos_planos: {}
       });
     } finally {
       setLoadingOfertas(false);
@@ -1538,8 +1544,30 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
+                  <h3 className="font-semibold text-lg mb-3">Configurações Gerais</h3>
+                  <div className="flex items-center space-x-2 mb-4">
+                    <Checkbox 
+                      id="plano_anual_ativo" 
+                      checked={configPlanos?.plano_anual_ativo !== false}
+                      onCheckedChange={(checked) => {
+                        setConfigPlanos({
+                          ...configPlanos,
+                          plano_anual_ativo: checked
+                        });
+                      }}
+                    />
+                    <label
+                      htmlFor="plano_anual_ativo"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Plano Anual Ativo
+                    </label>
+                  </div>
+                </div>
+                
+                <div>
                   <h3 className="font-semibold text-lg mb-3">Plano Básico</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-medium mb-1 text-muted-foreground">Preço Mensal (R$)</label>
                       <Input
@@ -1561,11 +1589,39 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
                       />
                     </div>
                   </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-muted-foreground">Recursos do Plano (um por linha)</label>
+                    <Textarea
+                      name="recursos_planos_basico"
+                      value={(configPlanos?.recursos_planos?.basico || [
+                        '4 Agentes IA Especializados',
+                        'Marketing & Mídias Sociais',
+                        'E-commerce Estratégico',
+                        'Criação de Coleção',
+                        'Fornecedores',
+                        '100 Créditos/mês',
+                        'Suporte por Email'
+                      ]).join('\n')}
+                      onChange={(e) => {
+                        const recursos = e.target.value.split('\n');
+                        setConfigPlanos({
+                          ...configPlanos,
+                          recursos_planos: {
+                            ...(configPlanos.recursos_planos || {}),
+                            basico: recursos
+                          }
+                        });
+                      }}
+                      placeholder="Digite um recurso por linha"
+                      className="min-h-[150px] whitespace-pre-wrap"
+                    />
+                  </div>
                 </div>
                 
                 <div>
                   <h3 className="font-semibold text-lg mb-3">Plano Intermediário</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-medium mb-1 text-muted-foreground">Preço Mensal (R$)</label>
                       <Input
@@ -1587,11 +1643,40 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
                       />
                     </div>
                   </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-muted-foreground">Recursos do Plano (um por linha)</label>
+                    <Textarea
+                      name="recursos_planos_intermediario"
+                      value={(configPlanos?.recursos_planos?.intermediario || [
+                        '7 Agentes IA Especializados',
+                        'Todos do plano Básico +',
+                        'Tráfego Pago',
+                        'Gestão Financeira', 
+                        'Construção de Comunidade',
+                        '250 Créditos/mês',
+                        'Suporte Prioritário',
+                        'Webinars Exclusivos'
+                      ]).join('\n')}
+                      onChange={(e) => {
+                        const recursos = e.target.value.split('\n');
+                        setConfigPlanos({
+                          ...configPlanos,
+                          recursos_planos: {
+                            ...(configPlanos.recursos_planos || {}),
+                            intermediario: recursos
+                          }
+                        });
+                      }}
+                      placeholder="Digite um recurso por linha"
+                      className="min-h-[150px] whitespace-pre-wrap"
+                    />
+                  </div>
                 </div>
                 
                 <div>
                   <h3 className="font-semibold text-lg mb-3">Plano Premium</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                       <label className="block text-sm font-medium mb-1 text-muted-foreground">Preço Mensal (R$)</label>
                       <Input
@@ -1612,6 +1697,36 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
                         placeholder="ex: 1997.00"
                       />
                     </div>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-muted-foreground">Recursos do Plano (um por linha)</label>
+                    <Textarea
+                      name="recursos_planos_premium"
+                      value={(configPlanos?.recursos_planos?.premium || [
+                        'TODOS os 11 Agentes IA',
+                        'IA de Geração de Imagens',
+                        'Networking & Relações',
+                        'Branding & Posicionamento',
+                        'Experiência de Unboxing',
+                        'Créditos ILIMITADOS',
+                        'Suporte VIP 24/7',
+                        'Consultoria Mensal 1:1',
+                        'Acesso Antecipado a Novos Agentes'
+                      ]).join('\n')}
+                      onChange={(e) => {
+                        const recursos = e.target.value.split('\n');
+                        setConfigPlanos({
+                          ...configPlanos,
+                          recursos_planos: {
+                            ...(configPlanos.recursos_planos || {}),
+                            premium: recursos
+                          }
+                        });
+                      }}
+                      placeholder="Digite um recurso por linha"
+                      className="min-h-[150px] whitespace-pre-wrap"
+                    />
                   </div>
                 </div>
                 

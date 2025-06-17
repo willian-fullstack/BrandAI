@@ -95,6 +95,53 @@ const configuracaoPlanosSchema = mongoose.Schema(
       type: Date,
       default: null,
     },
+    // Novo campo para controlar se o plano anual está ativo
+    plano_anual_ativo: {
+      type: Boolean,
+      default: true,
+    },
+    // Novo campo para recursos editáveis de cada plano
+    recursos_planos: {
+      basico: {
+        type: [String],
+        default: [
+          '4 Agentes IA Especializados',
+          'Marketing & Mídias Sociais',
+          'E-commerce Estratégico',
+          'Criação de Coleção',
+          'Fornecedores',
+          '100 Créditos/mês',
+          'Suporte por Email'
+        ]
+      },
+      intermediario: {
+        type: [String],
+        default: [
+          '7 Agentes IA Especializados',
+          'Todos do plano Básico +',
+          'Tráfego Pago',
+          'Gestão Financeira', 
+          'Construção de Comunidade',
+          '250 Créditos/mês',
+          'Suporte Prioritário',
+          'Webinars Exclusivos'
+        ]
+      },
+      premium: {
+        type: [String],
+        default: [
+          'TODOS os 11 Agentes IA',
+          'IA de Geração de Imagens',
+          'Networking & Relações',
+          'Branding & Posicionamento',
+          'Experiência de Unboxing',
+          'Créditos ILIMITADOS',
+          'Suporte VIP 24/7',
+          'Consultoria Mensal 1:1',
+          'Acesso Antecipado a Novos Agentes'
+        ]
+      }
+    },
     // Campos adicionais
     descontoAfiliados: {
       type: Number,

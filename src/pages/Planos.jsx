@@ -37,7 +37,40 @@ export default function Planos() {
     plano_intermediario_preco_mensal: 97,
     plano_intermediario_preco_anual: 897,
     plano_premium_preco_mensal: 197,
-    plano_premium_preco_anual: 997
+    plano_premium_preco_anual: 997,
+    plano_anual_ativo: true,
+    recursos_planos: {
+      basico: [
+        '4 Agentes IA Especializados',
+        'Marketing & Mídias Sociais',
+        'E-commerce Estratégico',
+        'Criação de Coleção',
+        'Fornecedores',
+        '100 Créditos/mês',
+        'Suporte por Email'
+      ],
+      intermediario: [
+        '7 Agentes IA Especializados',
+        'Todos do plano Básico +',
+        'Tráfego Pago',
+        'Gestão Financeira', 
+        'Construção de Comunidade',
+        '250 Créditos/mês',
+        'Suporte Prioritário',
+        'Webinars Exclusivos'
+      ],
+      premium: [
+        'TODOS os 11 Agentes IA',
+        'IA de Geração de Imagens',
+        'Networking & Relações',
+        'Branding & Posicionamento',
+        'Experiência de Unboxing',
+        'Créditos ILIMITADOS',
+        'Suporte VIP 24/7',
+        'Consultoria Mensal 1:1',
+        'Acesso Antecipado a Novos Agentes'
+      ]
+    }
   });
   const navigate = useNavigate();
   const location = useLocation();
@@ -106,8 +139,46 @@ export default function Planos() {
             oferta_ativa: configData.oferta_ativa || false,
             oferta_titulo: configData.oferta_titulo || '',
             oferta_descricao: configData.oferta_descricao || '',
+            plano_anual_ativo: configData.plano_anual_ativo !== false, // Se não existir, assume true
+            recursos_planos: configData.recursos_planos || {
+              basico: [
+                '4 Agentes IA Especializados',
+                'Marketing & Mídias Sociais',
+                'E-commerce Estratégico',
+                'Criação de Coleção',
+                'Fornecedores',
+                '100 Créditos/mês',
+                'Suporte por Email'
+              ],
+              intermediario: [
+                '7 Agentes IA Especializados',
+                'Todos do plano Básico +',
+                'Tráfego Pago',
+                'Gestão Financeira', 
+                'Construção de Comunidade',
+                '250 Créditos/mês',
+                'Suporte Prioritário',
+                'Webinars Exclusivos'
+              ],
+              premium: [
+                'TODOS os 11 Agentes IA',
+                'IA de Geração de Imagens',
+                'Networking & Relações',
+                'Branding & Posicionamento',
+                'Experiência de Unboxing',
+                'Créditos ILIMITADOS',
+                'Suporte VIP 24/7',
+                'Consultoria Mensal 1:1',
+                'Acesso Antecipado a Novos Agentes'
+              ]
+            },
             cupons: configData.cupons || []
           });
+          
+          // Se o plano anual não estiver ativo, forçar a exibição do plano mensal
+          if (configData.plano_anual_ativo === false) {
+            setPlanoAnual(false);
+          }
         }
       } catch (error) {
         console.warn("Usando preços padrão, erro ao carregar configurações de planos:", error);
@@ -187,7 +258,7 @@ export default function Planos() {
       agentes_inclusos: 4,
       cor: 'from-blue-500 to-cyan-600',
       popular: false,
-      recursos: [
+      recursos: configPlanos.recursos_planos?.basico || [
         '4 Agentes IA Especializados',
         'Marketing & Mídias Sociais',
         'E-commerce Estratégico',
@@ -210,7 +281,7 @@ export default function Planos() {
       agentes_inclusos: 7,
       cor: 'from-purple-500 to-indigo-600',
       popular: true,
-      recursos: [
+      recursos: configPlanos.recursos_planos?.intermediario || [
         '7 Agentes IA Especializados',
         'Todos do plano Básico +',
         'Tráfego Pago',
@@ -234,7 +305,7 @@ export default function Planos() {
       agentes_inclusos: 11,
       cor: 'from-yellow-400 to-orange-500',
       popular: false,
-      recursos: [
+      recursos: configPlanos.recursos_planos?.premium || [
         'TODOS os 11 Agentes IA',
         'IA de Geração de Imagens',
         'Networking & Relações',
@@ -315,27 +386,29 @@ export default function Planos() {
               </p>
             )}
             
-            {/* Toggle Anual/Mensal */}
-            <div className="inline-flex items-center bg-card border border-border p-1 rounded-full backdrop-blur-sm shadow-lg mx-auto mb-6">
-              <Button
-                variant={planoAnual ? "default" : "ghost"}
-                className={planoAnual 
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                  : "text-muted-foreground hover:text-foreground"}
-                onClick={() => setPlanoAnual(true)}
-              >
-                Anual <Badge variant="outline" className="ml-2 bg-primary/20 border-0">Até 2 meses grátis</Badge>
-              </Button>
-              <Button
-                variant={!planoAnual ? "default" : "ghost"}
-                className={!planoAnual 
-                  ? "bg-primary text-primary-foreground hover:bg-primary/90" 
-                  : "text-muted-foreground hover:text-foreground"}
-                onClick={() => setPlanoAnual(false)}
-              >
-                Mensal
-              </Button>
-            </div>
+            {/* Toggle Anual/Mensal - Só exibir se o plano anual estiver ativo */}
+            {configPlanos.plano_anual_ativo !== false && (
+              <div className="inline-flex items-center bg-card border border-border p-1 rounded-full backdrop-blur-sm shadow-lg mx-auto mb-6">
+                <Button
+                  variant={planoAnual ? "default" : "ghost"}
+                  className={planoAnual 
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                    : "text-muted-foreground hover:text-foreground"}
+                  onClick={() => setPlanoAnual(true)}
+                >
+                  Anual <Badge variant="outline" className="ml-2 bg-primary/20 border-0">Até 2 meses grátis</Badge>
+                </Button>
+                <Button
+                  variant={!planoAnual ? "default" : "ghost"}
+                  className={!planoAnual 
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                    : "text-muted-foreground hover:text-foreground"}
+                  onClick={() => setPlanoAnual(false)}
+                >
+                  Mensal
+                </Button>
+              </div>
+            )}
             
             {/* Seção de Cupom */}
             <div className="max-w-md mx-auto mb-8">
