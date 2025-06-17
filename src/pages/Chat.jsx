@@ -547,8 +547,8 @@ export default function Chat() {
       {/* Cabeçalho */}
       <header className={`fixed top-16 border-b border-border py-3 flex items-center justify-between z-10 bg-background ${
         conversa?.agente_id?.toLowerCase().includes('designer') && showDesignerPanel 
-          ? 'lg:w-[calc(60%-1px)] lg:left-64 left-0 right-0 border-r border-border px-4' 
-          : 'lg:left-64 left-0 right-0 px-4'
+          ? 'lg:w-[60%] lg:left-64 left-0 right-0 border-r border-border px-4' 
+          : 'lg:left-64 lg:right-0 left-0 right-0 px-4'
       }`}>
         <div className="flex items-center">
           <Button 
@@ -634,11 +634,11 @@ export default function Chat() {
         {/* Coluna da conversa (sempre presente) */}
         <div className={`flex flex-col ${
           conversa?.agente_id?.toLowerCase().includes('designer') && showDesignerPanel 
-            ? 'w-3/5 border-r border-border' 
+            ? 'w-full lg:w-[70%] border-r border-border pr-8' 
             : 'w-full'
         } lg:ml-0 relative`}>
           {/* Área de mensagens com rolagem */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-28">
+          <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-32">
             {/* Mensagem de boas-vindas */}
             {mensagens.length === 0 && (
               <div className="flex justify-center py-8">
@@ -687,14 +687,15 @@ export default function Chat() {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className={`flex ${isUserMessage ? "justify-end pr-2" : "justify-start pl-2"} mb-4`}
+                    className={`flex ${isUserMessage ? "justify-end pr-8" : "justify-start pl-2"} mb-4`}
                   >
                     <div 
-                      className={`max-w-[85%] md:max-w-[70%] rounded-lg p-4 shadow-sm ${
+                      className={`max-w-[85%] rounded-lg p-4 shadow-sm ${
                         isUserMessage 
                           ? "bg-primary text-primary-foreground border border-primary/30" 
                           : "bg-card border border-border"
                       }`}
+                      style={{ wordBreak: "break-word", overflowWrap: "break-word" }}
                     >
                       <div className="flex items-center gap-2 mb-2">
                         <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
@@ -715,7 +716,7 @@ export default function Chat() {
                           {formatarData(mensagem.timestamp)}
                         </p>
                       </div>
-                      <div className="mt-2">
+                      <div className="mt-2 break-words">
                         {formatMessageContent(mensagem.conteudo)}
                       </div>
                     </div>
@@ -731,7 +732,7 @@ export default function Chat() {
                 animate={{ opacity: 1, y: 0 }}
                 className="flex justify-start pl-2 mb-4"
               >
-                <div className="bg-card border border-border rounded-lg p-4 shadow-sm max-w-[85%] md:max-w-[70%]">
+                <div className="bg-card border border-border rounded-lg p-4 shadow-sm max-w-[85%]" style={{ wordBreak: "break-word", overflowWrap: "break-word" }}>
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
                       <Bot className="h-4 w-4 text-primary" />
@@ -752,10 +753,10 @@ export default function Chat() {
           </div>
 
           {/* Área de entrada de mensagem (sempre fixo no fundo) */}
-          <div className={`border-t border-border p-4 fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm z-10 shadow-lg ${
+          <div className={`border-t border-border p-4 fixed bottom-0 bg-background/95 backdrop-blur-sm z-20 shadow-lg ${
             conversa?.agente_id?.toLowerCase().includes('designer') && showDesignerPanel 
-              ? 'lg:left-64 lg:w-[calc(60%-1px)] lg:right-auto' 
-              : 'lg:left-64'
+              ? 'lg:left-64 lg:right-[30%] left-0 right-0'
+              : 'lg:left-64 lg:right-0 left-0 right-0'
           }`}>
             <div className="w-full">
               <form
@@ -798,8 +799,8 @@ export default function Chat() {
 
         {/* Coluna do Designer (fixo à direita, condicional) */}
         {conversa?.agente_id?.toLowerCase().includes('designer') && showDesignerPanel && (
-          <div className="w-2/5 bg-background flex flex-col h-full overflow-hidden">
-            <div className="p-4 bg-muted/30 flex items-center justify-between border-b border-border">
+          <div className="w-full lg:w-[30%] bg-background flex flex-col h-full overflow-hidden fixed right-0 top-16 bottom-0 z-10 lg:block hidden">
+            <div className="p-4 bg-muted/30 flex items-center justify-between border-b border-border sticky top-0 z-10">
               <div className="flex items-center gap-2">
                 <Wand2 className="h-5 w-5 text-primary" />
                 <h2 className="font-semibold">Gerador de Imagens</h2>
@@ -814,9 +815,54 @@ export default function Chat() {
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto h-full pb-6">
               <DesignerInterface 
                 onImageGenerated={handleImageGenerated}
+                user={user}
+                agenteConfigData={agenteConfigData}
+                previousImages={previousImages}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Versão móvel do Designer - Botão flutuante para mostrar/esconder */}
+        {conversa?.agente_id?.toLowerCase().includes('designer') && (
+          <div className="lg:hidden fixed right-4 bottom-20 z-30">
+            <Button
+              size="icon"
+              className="h-12 w-12 rounded-full bg-primary shadow-lg"
+              onClick={toggleDesignerPanel}
+            >
+              <Wand2 className="h-6 w-6 text-primary-foreground" />
+            </Button>
+          </div>
+        )}
+
+        {/* Painel móvel do Designer */}
+        {conversa?.agente_id?.toLowerCase().includes('designer') && showDesignerPanel && (
+          <div className="lg:hidden fixed inset-0 bg-background/95 backdrop-blur-sm z-40 flex flex-col">
+            <div className="p-4 bg-muted/30 flex items-center justify-between border-b border-border sticky top-0 z-10">
+              <div className="flex items-center gap-2">
+                <Wand2 className="h-5 w-5 text-primary" />
+                <h2 className="font-semibold">Gerador de Imagens</h2>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleDesignerPanel}
+                className="ml-auto"
+                title="Fechar painel"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <DesignerInterface 
+                onImageGenerated={(url, prompt) => {
+                  handleImageGenerated(url, prompt);
+                  toggleDesignerPanel(); // Fechar o painel após gerar a imagem em dispositivos móveis
+                }}
                 user={user}
                 agenteConfigData={agenteConfigData}
                 previousImages={previousImages}
