@@ -18,12 +18,14 @@ import {
   Zap,
   Clock,
   ChevronRight,
-  Plus
+  Plus,
+  Search
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { agentesConfig, planosConfig } from "@/config/agentes";
 import ThemeToggle from "@/components/ui/theme-toggle";
 import { AgenteConfig } from "@/api/entities";
+import { Input } from "@/components/ui/input";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
@@ -31,6 +33,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [agenteUsageData, setAgenteUsageData] = useState({});
   const [agentesConfigs, setAgentesConfigs] = useState([]);
+  const [consultaAgente, setConsultaAgente] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -75,6 +78,13 @@ export default function Dashboard() {
 
   const navegarParaAgente = (agenteId) => {
     navigate(`/app/chat?agente=${agenteId}`);
+  };
+
+  const buscarAgenteRecomendado = (e) => {
+    e.preventDefault();
+    if (consultaAgente.trim()) {
+      navigate(`/app/diagnostico?consulta=${encodeURIComponent(consultaAgente)}`);
+    }
   };
 
   // Detectar mudanças de tema
@@ -195,7 +205,7 @@ export default function Dashboard() {
               {user?.role === 'admin' && <span className="text-red-500 ml-2">(Admin)</span>}
             </h1>
             <p className="text-muted-foreground">
-              Pronto para acelerar sua marca com IA?
+              Bem-vindo ao seu painel da BrandLab!
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -221,6 +231,39 @@ export default function Dashboard() {
               </Link>
             )}
           </div>
+        </div>
+      </motion.div>
+
+      {/* Seção de diagnóstico/consulta */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="mb-8"
+      >
+        <div className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 p-8 text-white">
+          <div className="text-center mb-8">
+            <h2 className="text-4xl font-bold mb-3">O que você precisa?</h2>
+            <p className="text-white/80 text-lg">Irá indicar qual Agente é ideal para sua necessidade!</p>
+          </div>
+          <form onSubmit={buscarAgenteRecomendado} className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto">
+            <div className="relative flex-1">
+              <Input
+                type="text"
+                placeholder="Escreva aqui!"
+                className="bg-white/20 backdrop-blur-sm border-white/30 text-white placeholder:text-white/60 rounded-lg py-6 px-4 w-full focus:ring-2 focus:ring-white/50 focus:border-transparent"
+                value={consultaAgente}
+                onChange={(e) => setConsultaAgente(e.target.value)}
+              />
+            </div>
+            <Button 
+              type="submit"
+              className="bg-white text-purple-600 hover:bg-white/90 py-6 px-6 rounded-lg font-semibold flex items-center justify-center"
+            >
+              <Search className="w-5 h-5 mr-2" />
+              Buscar
+            </Button>
+          </form>
         </div>
       </motion.div>
 
