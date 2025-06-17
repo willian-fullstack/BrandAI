@@ -300,115 +300,115 @@ Dados: ${JSON.stringify(data, null, 2)}`);
               </CardContent>
             </Card>
           ) : (
-            <Card className="border border-slate-700/50 shadow-xl bg-slate-800/50 backdrop-blur-md rounded-xl overflow-hidden">
-              <CardHeader className="space-y-1 border-b border-slate-700/50">
-                <CardTitle className="text-2xl font-bold text-white flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-amber-400" />
-                  Ferramenta de Diagnóstico
-                </CardTitle>
-                <CardDescription className="text-slate-400">
-                  Use esta ferramenta para diagnosticar problemas com usuários
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <div className="space-y-6">
-                  <div className="p-4 bg-slate-900/50 rounded-lg text-xs border border-slate-700/50 backdrop-blur-sm">
-                    <h3 className="font-semibold mb-2 text-slate-300 flex items-center gap-2">
-                      <Database className="w-4 h-4 text-indigo-400" />
-                      Informações do Ambiente:
-                    </h3>
-                    <pre className="whitespace-pre-wrap overflow-auto text-slate-400 p-2 bg-slate-800/50 rounded border border-slate-700/30">
-                      {JSON.stringify(apiInfo, null, 2)}
-                    </pre>
-                  </div>
+          <Card className="border border-slate-700/50 shadow-xl bg-slate-800/50 backdrop-blur-md rounded-xl overflow-hidden">
+            <CardHeader className="space-y-1 border-b border-slate-700/50">
+              <CardTitle className="text-2xl font-bold text-white flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-400" />
+                Ferramenta de Diagnóstico
+              </CardTitle>
+              <CardDescription className="text-slate-400">
+                Use esta ferramenta para diagnosticar problemas com usuários
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-6">
+                <div className="p-4 bg-slate-900/50 rounded-lg text-xs border border-slate-700/50 backdrop-blur-sm">
+                  <h3 className="font-semibold mb-2 text-slate-300 flex items-center gap-2">
+                    <Database className="w-4 h-4 text-indigo-400" />
+                    Informações do Ambiente:
+                  </h3>
+                  <pre className="whitespace-pre-wrap overflow-auto text-slate-400 p-2 bg-slate-800/50 rounded border border-slate-700/30">
+                    {JSON.stringify(apiInfo, null, 2)}
+                  </pre>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-slate-300">Email do Usuário</Label>
+                  <Input 
+                    id="email" 
+                    placeholder="email@exemplo.com" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="bg-slate-700/50 border-slate-600 text-white placeholder-slate-400"
+                  />
+                </div>
+                
+                <div className="flex flex-col gap-3">
+                  <Button 
+                    onClick={testBackendConnection}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    disabled={loading}
+                  >
+                    {loading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Wifi className="w-4 h-4 mr-2" />}
+                    Testar Conexão com Backend
+                  </Button>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-slate-300">Email do Usuário</Label>
-                    <Input 
-                      id="email" 
-                      placeholder="email@exemplo.com" 
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="bg-slate-700/50 border-slate-600 text-white placeholder-slate-400"
-                    />
-                  </div>
-                  
-                  <div className="flex flex-col gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                     <Button 
-                      onClick={testBackendConnection}
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                      onClick={limparUsuario} 
+                      disabled={!email || loading}
+                      className="bg-red-600 hover:bg-red-700 text-white"
+                    >
+                      <UserX className="w-4 h-4 mr-2" />
+                      Remover Usuário
+                    </Button>
+                    <Button 
+                      onClick={verificarStatusUsuario} 
+                      disabled={!email || loading}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Check className="w-4 h-4 mr-2" />
+                      Verificar Status
+                    </Button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <Button 
+                      onClick={limparLocalStorage}
+                      className="bg-amber-600 hover:bg-amber-700 text-white"
                       disabled={loading}
                     >
-                      {loading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Wifi className="w-4 h-4 mr-2" />}
-                      Testar Conexão com Backend
+                      <HardDrive className="w-4 h-4 mr-2" />
+                      Limpar LocalStorage
                     </Button>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                      <Button 
-                        onClick={limparUsuario} 
-                        disabled={!email || loading}
-                        className="bg-red-600 hover:bg-red-700 text-white"
-                      >
-                        <UserX className="w-4 h-4 mr-2" />
-                        Remover Usuário
-                      </Button>
-                      <Button 
-                        onClick={verificarStatusUsuario} 
-                        disabled={!email || loading}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
-                      >
-                        <Check className="w-4 h-4 mr-2" />
-                        Verificar Status
-                      </Button>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <Button 
-                        onClick={limparLocalStorage}
-                        className="bg-amber-600 hover:bg-amber-700 text-white"
-                        disabled={loading}
-                      >
-                        <HardDrive className="w-4 h-4 mr-2" />
-                        Limpar LocalStorage
-                      </Button>
-                      
-                      <Button 
-                        onClick={testarLimpezaDireta}
-                        disabled={!email || loading}
-                        className="bg-purple-600 hover:bg-purple-700 text-white"
-                      >
-                        <Database className="w-4 h-4 mr-2" />
-                        Testar URL Direta
-                      </Button>
+                    <Button 
+                      onClick={testarLimpezaDireta}
+                      disabled={!email || loading}
+                      className="bg-purple-600 hover:bg-purple-700 text-white"
+                    >
+                      <Database className="w-4 h-4 mr-2" />
+                      Testar URL Direta
+                    </Button>
+                  </div>
+                </div>
+                
+                {loading && (
+                  <div className="p-4 flex justify-center">
+                    <div className="animate-pulse flex flex-col items-center gap-2">
+                      <div className="w-8 h-8 relative">
+                        <div className="absolute inset-0 rounded-full border-t-2 border-indigo-500 animate-spin"></div>
+                      </div>
+                      <span className="text-slate-400 text-sm">Executando operação...</span>
                     </div>
                   </div>
-                  
-                  {loading && (
-                    <div className="p-4 flex justify-center">
-                      <div className="animate-pulse flex flex-col items-center gap-2">
-                        <div className="w-8 h-8 relative">
-                          <div className="absolute inset-0 rounded-full border-t-2 border-indigo-500 animate-spin"></div>
-                        </div>
-                        <span className="text-slate-400 text-sm">Executando operação...</span>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {result && (
-                    <motion.div 
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="p-4 bg-slate-900/50 rounded-lg border border-slate-700/50 backdrop-blur-sm mt-4"
-                    >
-                      <h3 className="font-semibold mb-2 text-slate-300">Resultado:</h3>
-                      <pre className="whitespace-pre-wrap overflow-auto text-slate-400 p-3 bg-slate-800/70 rounded border border-slate-700/30 text-xs">
-                        {result}
-                      </pre>
-                    </motion.div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                )}
+                
+                {result && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 bg-slate-900/50 rounded-lg border border-slate-700/50 backdrop-blur-sm mt-4"
+                  >
+                    <h3 className="font-semibold mb-2 text-slate-300">Resultado:</h3>
+                    <pre className="whitespace-pre-wrap overflow-auto text-slate-400 p-3 bg-slate-800/70 rounded border border-slate-700/30 text-xs">
+                      {result}
+                    </pre>
+                  </motion.div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
           )}
         </motion.div>
         

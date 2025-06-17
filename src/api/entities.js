@@ -270,9 +270,21 @@ export const ConfiguracaoIA = {
 export const ConfiguracaoPlanos = {
   getAll: async () => {
     try {
+      console.log('Chamando API para buscar configurações de planos...');
       const response = await api.get('/configuracao-planos');
+      console.log('Resposta da API de configurações de planos:', response.data);
+      
+      // Verificar se há dados de ofertas e cupons
+      if (response.data && response.data.length > 0) {
+        const primeiraConfig = response.data[0];
+        console.log('Oferta ativa?', primeiraConfig.oferta_ativa);
+        console.log('Título da oferta:', primeiraConfig.oferta_titulo);
+        console.log('Cupons:', primeiraConfig.cupons || []);
+      }
+      
       return response.data;
     } catch (error) {
+      console.error('Erro ao buscar configurações de planos:', error);
       throw error.response?.data || { message: 'Erro ao buscar configurações de planos' };
     }
   },

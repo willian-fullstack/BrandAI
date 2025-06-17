@@ -4,6 +4,7 @@ import { ConfiguracaoPlanos } from "@/api/entities";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { 
@@ -15,15 +16,21 @@ import {
   Gift,
   LogIn,
   ShieldCheck,
-  ArrowLeft
+  ArrowLeft,
+  Tag,
+  X
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { isAdmin } from "@/api/base44Client";
+import { toast } from "sonner";
 
 export default function Planos() {
   const [user, setUser] = useState(null);
   const [planoAnual, setPlanoAnual] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [cupomCodigo, setCupomCodigo] = useState("");
+  const [cupomAplicado, setCupomAplicado] = useState(null);
+  const [aplicandoCupom, setAplicandoCupom] = useState(false);
   const [configPlanos, setConfigPlanos] = useState({
     plano_basico_preco_mensal: 67,
     plano_basico_preco_anual: 597,
@@ -72,6 +79,15 @@ export default function Planos() {
         if (planosDataResults && planosDataResults.length > 0) {
           const configData = planosDataResults[0];
           console.log("Configuração selecionada:", configData);
+          console.log("Oferta ativa?", configData.oferta_ativa);
+          console.log("Preços originais:", {
+            basico_mensal: configData.plano_basico_preco_original_mensal,
+            basico_anual: configData.plano_basico_preco_original_anual,
+            intermediario_mensal: configData.plano_intermediario_preco_original_mensal,
+            intermediario_anual: configData.plano_intermediario_preco_original_anual,
+            premium_mensal: configData.plano_premium_preco_original_mensal,
+            premium_anual: configData.plano_premium_preco_original_anual
+          });
           
           // Atualizar o estado com os valores carregados
           setConfigPlanos({
@@ -80,7 +96,17 @@ export default function Planos() {
             plano_intermediario_preco_mensal: configData.plano_intermediario_preco_mensal || 97,
             plano_intermediario_preco_anual: configData.plano_intermediario_preco_anual || 897,
             plano_premium_preco_mensal: configData.plano_premium_preco_mensal || 197,
-            plano_premium_preco_anual: configData.plano_premium_preco_anual || 997
+            plano_premium_preco_anual: configData.plano_premium_preco_anual || 997,
+            plano_basico_preco_original_mensal: configData.plano_basico_preco_original_mensal || 0,
+            plano_basico_preco_original_anual: configData.plano_basico_preco_original_anual || 0,
+            plano_intermediario_preco_original_mensal: configData.plano_intermediario_preco_original_mensal || 0,
+            plano_intermediario_preco_original_anual: configData.plano_intermediario_preco_original_anual || 0,
+            plano_premium_preco_original_mensal: configData.plano_premium_preco_original_mensal || 0,
+            plano_premium_preco_original_anual: configData.plano_premium_preco_original_anual || 0,
+            oferta_ativa: configData.oferta_ativa || false,
+            oferta_titulo: configData.oferta_titulo || '',
+            oferta_descricao: configData.oferta_descricao || '',
+            cupons: configData.cupons || []
           });
         }
       } catch (error) {
@@ -93,13 +119,69 @@ export default function Planos() {
     }
   };
 
+  const aplicarCupom = async () => {
+    if (!cupomCodigo.trim()) {
+      toast.error("Digite um código de cupom válido");
+      return;
+    }
+
+    setAplicandoCupom(true);
+    try {
+      // Chamar a API para verificar o cupom
+      const response = await fetch(`/api/configuracao-planos/verificar-cupom/${cupomCodigo}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Cupom inválido");
+      }
+
+      if (data.valido) {
+        setCupomAplicado(data.cupom);
+        toast.success("Cupom aplicado com sucesso!");
+      } else {
+        setCupomAplicado(null);
+        toast.error(data.message || "Cupom inválido");
+      }
+    } catch (error) {
+      console.error("Erro ao aplicar cupom:", error);
+      toast.error(error.message || "Erro ao aplicar cupom");
+      setCupomAplicado(null);
+    } finally {
+      setAplicandoCupom(false);
+    }
+  };
+
+  const removerCupom = () => {
+    setCupomAplicado(null);
+    setCupomCodigo("");
+    toast.info("Cupom removido");
+  };
+
+  // Calcular preços com desconto do cupom, se aplicável
+  const calcularPrecoComDesconto = (preco, planoId) => {
+    if (!cupomAplicado) return preco;
+    
+    // Verificar se o cupom é aplicável ao plano atual
+    if (!cupomAplicado.planos_aplicaveis.includes(planoId)) return preco;
+    
+    if (cupomAplicado.tipo === 'percentual') {
+      return preco - (preco * (cupomAplicado.valor / 100));
+    } else if (cupomAplicado.tipo === 'valor_fixo') {
+      return Math.max(0, preco - cupomAplicado.valor);
+    }
+    
+    return preco;
+  };
+
   const planos = [
     {
       id: 'basico',
       nome: 'Básico',
       subtitulo: 'Para quem está começando',
-      preco_mensal: configPlanos.plano_basico_preco_mensal || 67,
-      preco_anual: configPlanos.plano_basico_preco_anual || 597,
+      preco_mensal: calcularPrecoComDesconto(configPlanos.plano_basico_preco_mensal || 67, 'basico'),
+      preco_anual: calcularPrecoComDesconto(configPlanos.plano_basico_preco_anual || 597, 'basico'),
+      preco_original: Number(configPlanos.plano_basico_preco_original_mensal) || 0,
+      preco_original_anual: Number(configPlanos.plano_basico_preco_original_anual) || 0,
       economia: (configPlanos.plano_basico_preco_mensal * 12) - (configPlanos.plano_basico_preco_anual || 597),
       meses_gratis: ((configPlanos.plano_basico_preco_mensal * 12) - (configPlanos.plano_basico_preco_anual || 597)) / (configPlanos.plano_basico_preco_mensal || 67),
       agentes_inclusos: 4,
@@ -119,8 +201,10 @@ export default function Planos() {
       id: 'intermediario',
       nome: 'Intermediário',
       subtitulo: 'Mais Vendido 🔥',
-      preco_mensal: configPlanos.plano_intermediario_preco_mensal || 97,
-      preco_anual: configPlanos.plano_intermediario_preco_anual || 897,
+      preco_mensal: calcularPrecoComDesconto(configPlanos.plano_intermediario_preco_mensal || 97, 'intermediario'),
+      preco_anual: calcularPrecoComDesconto(configPlanos.plano_intermediario_preco_anual || 897, 'intermediario'),
+      preco_original: Number(configPlanos.plano_intermediario_preco_original_mensal) || 0,
+      preco_original_anual: Number(configPlanos.plano_intermediario_preco_original_anual) || 0,
       economia: (configPlanos.plano_intermediario_preco_mensal * 12) - (configPlanos.plano_intermediario_preco_anual || 897),
       meses_gratis: ((configPlanos.plano_intermediario_preco_mensal * 12) - (configPlanos.plano_intermediario_preco_anual || 897)) / (configPlanos.plano_intermediario_preco_mensal || 97),
       agentes_inclusos: 7,
@@ -141,8 +225,10 @@ export default function Planos() {
       id: 'premium',
       nome: 'Avançado',
       subtitulo: 'Para quem leva a sério 🚀',
-      preco_mensal: configPlanos.plano_premium_preco_mensal || 197,
-      preco_anual: configPlanos.plano_premium_preco_anual || 997,
+      preco_mensal: calcularPrecoComDesconto(configPlanos.plano_premium_preco_mensal || 197, 'premium'),
+      preco_anual: calcularPrecoComDesconto(configPlanos.plano_premium_preco_anual || 997, 'premium'),
+      preco_original: Number(configPlanos.plano_premium_preco_original_mensal) || 0,
+      preco_original_anual: Number(configPlanos.plano_premium_preco_original_anual) || 0,
       economia: (configPlanos.plano_premium_preco_mensal * 12) - (configPlanos.plano_premium_preco_anual || 997),
       meses_gratis: ((configPlanos.plano_premium_preco_mensal * 12) - (configPlanos.plano_premium_preco_anual || 997)) / (configPlanos.plano_premium_preco_mensal || 197),
       agentes_inclusos: 11,
@@ -173,24 +259,12 @@ export default function Planos() {
     alert(`Implementar integração com gateway de pagamento para plano: ${planoId}`);
   };
 
-  const handleUpgrade = (planoId) => {
-    if (!user) {
-      // Se não estiver logado, redirecionar para a página de login
-      navigate('/login');
-      return;
-    }
-    
-    const planoAtual = user?.plano_atual;
-    const valores = {
-      basico: { intermediario: 30, premium: 60 },
-      intermediario: { premium: 30 }
-    };
-    
-    const valorUpgrade = valores[planoAtual]?.[planoId];
-    if (valorUpgrade) {
-      alert(`Por mais R$${valorUpgrade}, você pode fazer upgrade para o plano ${planoId}!`);
-    }
-  };
+  // Após a definição dos planos, adicionar logs para diagnóstico
+  useEffect(() => {
+    console.log("Planos atualizados:", planos);
+    console.log("Configurações de planos:", configPlanos);
+    console.log("Oferta ativa?", configPlanos.oferta_ativa);
+  }, [planos, configPlanos]);
 
   if (loading) {
     return (
@@ -242,7 +316,7 @@ export default function Planos() {
             )}
             
             {/* Toggle Anual/Mensal */}
-            <div className="inline-flex items-center bg-card border border-border p-1 rounded-full backdrop-blur-sm shadow-lg mx-auto mb-12">
+            <div className="inline-flex items-center bg-card border border-border p-1 rounded-full backdrop-blur-sm shadow-lg mx-auto mb-6">
               <Button
                 variant={planoAnual ? "default" : "ghost"}
                 className={planoAnual 
@@ -261,6 +335,61 @@ export default function Planos() {
               >
                 Mensal
               </Button>
+            </div>
+            
+            {/* Seção de Cupom */}
+            <div className="max-w-md mx-auto mb-8">
+              <div className="flex gap-2">
+                <div className="relative flex-grow">
+                  <Input
+                    placeholder="Tem um cupom de desconto?"
+                    value={cupomCodigo}
+                    onChange={(e) => setCupomCodigo(e.target.value)}
+                    disabled={!!cupomAplicado || aplicandoCupom}
+                    className="pr-10"
+                  />
+                  {cupomAplicado && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-100/50"
+                      onClick={removerCupom}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                {!cupomAplicado ? (
+                  <Button 
+                    onClick={aplicarCupom} 
+                    disabled={aplicandoCupom || !cupomCodigo.trim()}
+                    className="bg-primary hover:bg-primary/90"
+                  >
+                    <Tag className="mr-2 h-4 w-4" />
+                    {aplicandoCupom ? 'Aplicando...' : 'Aplicar'}
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    className="text-emerald-600 border-emerald-600"
+                    disabled
+                  >
+                    <Check className="mr-2 h-4 w-4" />
+                    Aplicado
+                  </Button>
+                )}
+              </div>
+              
+              {cupomAplicado && (
+                <div className="mt-2 text-sm flex items-center gap-2 justify-center">
+                  <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400 border-0">
+                    {cupomAplicado.tipo === 'percentual' 
+                      ? `${cupomAplicado.valor}% de desconto` 
+                      : `R$${cupomAplicado.valor} de desconto`}
+                  </Badge>
+                  <span className="text-muted-foreground">{cupomAplicado.descricao}</span>
+                </div>
+              )}
             </div>
           </div>
         </motion.div>
@@ -314,6 +443,41 @@ export default function Planos() {
                         <span className="text-muted-foreground mb-1">/mês</span>
                       )}
                     </div>
+                    
+                    {/* Mostrar preço original riscado quando houver oferta */}
+                    {planoAnual && configPlanos.oferta_ativa && 
+                     plano.preco_original_anual > 0 && 
+                     plano.preco_original_anual > plano.preco_anual && (
+                      <div className="mt-1">
+                        <span className="text-muted-foreground line-through text-sm">
+                          De R${plano.preco_original_anual}
+                        </span>
+                        <Badge variant="outline" className="ml-2 bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-400 border-red-200 dark:border-red-800/50">
+                          {Math.round((1 - plano.preco_anual / plano.preco_original_anual) * 100)}% OFF
+                        </Badge>
+                      </div>
+                    )}
+                    
+                    {!planoAnual && configPlanos.oferta_ativa && 
+                     plano.preco_original > 0 && 
+                     plano.preco_original > plano.preco_mensal && (
+                      <div className="mt-1">
+                        <span className="text-muted-foreground line-through text-sm">
+                          De R${plano.preco_original}
+                        </span>
+                        <Badge variant="outline" className="ml-2 bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-400 border-red-200 dark:border-red-800/50">
+                          {Math.round((1 - plano.preco_mensal / plano.preco_original) * 100)}% OFF
+                        </Badge>
+                      </div>
+                    )}
+                    
+                    {configPlanos.oferta_ativa && configPlanos.oferta_titulo && (
+                      <div className="mt-2">
+                        <Badge variant="outline" className="bg-amber-100 dark:bg-amber-900/20 text-amber-800 dark:text-amber-400 border-amber-200 dark:border-amber-800/50">
+                          {configPlanos.oferta_titulo}
+                        </Badge>
+                      </div>
+                    )}
                     
                     {planoAnual && (
                       <div className="mt-2 flex flex-col">

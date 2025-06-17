@@ -246,4 +246,139 @@ O sistema implementa uma abordagem híbrida para gerenciar o acesso dos usuário
      - Verifica se o agente foi liberado manualmente pelo administrador
    - O usuário tem acesso se qualquer uma das condições for atendida
 
-Esta abordagem oferece flexibilidade para configurar o acesso padrão por plano e, ao mesmo tempo, permite personalizações específicas por usuário quando necessário. 
+Esta abordagem oferece flexibilidade para configurar o acesso padrão por plano e, ao mesmo tempo, permite personalizações específicas por usuário quando necessário.
+
+## Funcionalidades de Ofertas e Cupons
+
+### Visão Geral
+O sistema agora suporta ofertas e cupons de desconto para os planos disponíveis. Estas funcionalidades permitem:
+
+1. **Ofertas**: Configurar preços promocionais com exibição do preço original riscado
+2. **Cupons de Desconto**: Criar e gerenciar cupons com diferentes tipos de desconto (percentual ou valor fixo)
+
+### Modelo de Dados
+
+O modelo `ConfiguracaoPlanos` foi estendido para incluir:
+
+#### Campos para Ofertas:
+- `plano_X_preco_original_mensal`: Preço original mensal do plano (para exibir riscado)
+- `plano_X_preco_original_anual`: Preço original anual do plano (para exibir riscado)
+- `oferta_ativa`: Booleano que indica se há uma oferta ativa
+- `oferta_titulo`: Título da oferta (ex: "Promoção de Lançamento")
+- `oferta_descricao`: Descrição da oferta (ex: "30% de desconto por tempo limitado")
+- `oferta_data_inicio`: Data de início da oferta
+- `oferta_data_fim`: Data de término da oferta
+
+#### Campos para Cupons:
+- `cupons`: Array de objetos com a seguinte estrutura:
+  - `codigo`: Código do cupom (ex: "PROMO10")
+  - `descricao`: Descrição do cupom
+  - `tipo`: Tipo de desconto ("percentual" ou "valor_fixo")
+  - `valor`: Valor do desconto (percentual ou valor em reais)
+  - `data_inicio`: Data de início da validade
+  - `data_expiracao`: Data de expiração
+  - `limite_usos`: Limite de usos (0 = ilimitado)
+  - `usos_atuais`: Contador de usos atuais
+  - `planos_aplicaveis`: Array com IDs dos planos aplicáveis ("basico", "intermediario", "premium")
+  - `ativo`: Booleano que indica se o cupom está ativo
+
+### Endpoints da API
+
+#### Verificar Cupom
+- **Endpoint**: `GET /api/configuracao-planos/verificar-cupom/:codigo`
+- **Descrição**: Verifica se um cupom é válido
+- **Resposta de Sucesso**:
+  ```json
+  {
+    "valido": true,
+    "cupom": {
+      "codigo": "PROMO10",
+      "tipo": "percentual",
+      "valor": 10,
+      "descricao": "Desconto de 10%",
+      "planos_aplicaveis": ["basico", "intermediario", "premium"]
+    }
+  }
+  ```
+
+#### Aplicar Cupom
+- **Endpoint**: `PUT /api/configuracao-planos/aplicar-cupom/:codigo`
+- **Descrição**: Incrementa o contador de uso do cupom
+- **Resposta de Sucesso**:
+  ```json
+  {
+    "message": "Cupom aplicado com sucesso",
+    "usos_atuais": 1
+  }
+  ```
+
+### Interface de Administração
+
+No painel administrativo, na aba "Ofertas", os administradores podem:
+
+1. **Configurar Ofertas**:
+   - Ativar/desativar ofertas
+   - Definir título e descrição da oferta
+   - Configurar período de validade
+   - Definir preços originais para exibição riscada
+
+2. **Gerenciar Cupons**:
+   - Criar novos cupons
+   - Editar cupons existentes
+   - Definir tipo de desconto (percentual ou valor fixo)
+   - Configurar validade e limite de usos
+   - Especificar planos aplicáveis
+
+### Interface do Cliente
+
+Na página de Planos, os clientes podem:
+
+1. **Ver Ofertas**:
+   - Preços promocionais são exibidos normalmente
+   - Preços originais são exibidos riscados quando há uma oferta ativa
+   - Percentual de desconto é calculado e exibido automaticamente
+
+2. **Aplicar Cupons**:
+   - Campo para inserir código de cupom
+   - Botão para aplicar o cupom
+   - Exibição do desconto aplicado
+   - Opção para remover o cupom aplicado
+
+### Lógica de Negócios
+
+1. **Validação de Cupons**:
+   - Verifica se o cupom existe
+   - Verifica se o cupom está ativo
+   - Verifica se o cupom está dentro do período de validade
+   - Verifica se o limite de usos não foi excedido
+
+2. **Cálculo de Descontos**:
+   - Para descontos percentuais: `preco - (preco * percentual / 100)`
+   - Para descontos de valor fixo: `preco - valor`
+   - O desconto só é aplicado aos planos especificados em `planos_aplicaveis`
+
+## Sistema de Ofertas e Cupons
+
+### Preços Riscados (Ofertas)
+
+O sistema permite exibir preços promocionais com os preços originais riscados. Para isso, é necessário:
+
+1. Configurar os preços originais para cada plano (mensal e anual)
+2. Ativar a oferta através do campo `oferta_ativa`
+3. Opcionalmente, configurar um título e descrição para a oferta
+
+Os preços riscados só serão exibidos quando:
+- A oferta estiver ativa (`oferta_ativa = true`)
+- O preço original for maior que o preço atual
+- O preço original for maior que zero
+
+Se houver problemas com a exibição dos preços riscados, verifique se:
+- Os preços originais estão corretamente configurados e são maiores que os preços atuais
+- A oferta está ativa
+- Os valores estão sendo convertidos corretamente para números (use `Number()` para garantir)
+
+Para configurar rapidamente os preços originais, você pode usar o script `scripts/atualizar-precos-originais.js` que define automaticamente os preços originais como 20% maiores que os preços atuais.
+
+### Cupons de Desconto
+
+O sistema de cupons permite oferecer descontos especiais aos usuários. Cada cupom possui: 

@@ -5,11 +5,207 @@ import ConfiguracaoPlanos from '../models/ConfiguracaoPlanos.js';
 // @access  Público
 export const getConfiguracoesPlanos = async (req, res) => {
   try {
-    const configuracoes = await ConfiguracaoPlanos.find({}).sort('preco_mensal');
-    res.json(configuracoes);
+    const configuracoesPlanos = await ConfiguracaoPlanos.find();
+    res.json(configuracoesPlanos);
   } catch (error) {
-    console.error('Erro ao obter configurações de planos:', error);
-    res.status(500).json({ message: 'Erro ao obter configurações de planos' });
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Obter uma configuração de plano específica
+// @route   GET /api/configuracao-planos/:id
+// @access  Público
+export const getConfiguracaoPlano = async (req, res) => {
+  try {
+    const configuracaoPlano = await ConfiguracaoPlanos.findById(req.params.id);
+    if (!configuracaoPlano) {
+      return res.status(404).json({ message: 'Configuração de plano não encontrada' });
+    }
+    res.json(configuracaoPlano);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Criar uma nova configuração de plano
+// @route   POST /api/configuracao-planos
+// @access  Privado/Admin
+export const createConfiguracaoPlano = async (req, res) => {
+  try {
+    const configuracaoPlano = new ConfiguracaoPlanos(req.body);
+    const savedConfiguracaoPlano = await configuracaoPlano.save();
+    res.status(201).json(savedConfiguracaoPlano);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// @desc    Atualizar uma configuração de plano existente
+// @route   PUT /api/configuracao-planos/:id
+// @access  Privado/Admin
+export const updateConfiguracaoPlano = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Verificar se existem cupons e garantir que tenham os campos necessários
+    if (req.body.cupons && Array.isArray(req.body.cupons)) {
+      req.body.cupons = req.body.cupons.map(cupom => {
+        // Garantir que cada cupom tenha um código
+        if (!cupom.codigo) {
+          cupom.codigo = `CUPOM${Math.floor(Math.random() * 10000)}`;
+        }
+        return cupom;
+      });
+    }
+    
+    const updatedConfiguracaoPlano = await ConfiguracaoPlanos.findByIdAndUpdate(
+      id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+    
+    if (!updatedConfiguracaoPlano) {
+      return res.status(404).json({ message: 'Configuração de plano não encontrada' });
+    }
+    
+    res.json(updatedConfiguracaoPlano);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// @desc    Excluir uma configuração de plano
+// @route   DELETE /api/configuracao-planos/:id
+// @access  Privado/Admin
+export const deleteConfiguracaoPlano = async (req, res) => {
+  try {
+    const configuracaoPlano = await ConfiguracaoPlanos.findById(req.params.id);
+    if (!configuracaoPlano) {
+      return res.status(404).json({ message: 'Configuração de plano não encontrada' });
+    }
+    
+    await configuracaoPlano.deleteOne();
+    res.json({ message: 'Configuração de plano excluída com sucesso' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Verificar validade de um cupom
+// @route   GET /api/configuracao-planos/verificar-cupom/:codigo
+// @access  Público
+export const verificarCupom = async (req, res) => {
+  try {
+    const { codigo } = req.params;
+    
+    // Buscar configuração que contém o cupom
+    const configuracao = await ConfiguracaoPlanos.findOne({
+      'cupons.codigo': codigo
+    });
+    
+    if (!configuracao) {
+      return res.status(404).json({ 
+        valido: false,
+        message: 'Cupom não encontrado' 
+      });
+    }
+    
+    // Encontrar o cupom específico
+    const cupom = configuracao.cupons.find(c => c.codigo === codigo);
+    
+    if (!cupom) {
+      return res.status(404).json({ 
+        valido: false,
+        message: 'Cupom não encontrado' 
+      });
+    }
+    
+    // Verificar se o cupom está ativo
+    if (!cupom.ativo) {
+      return res.status(400).json({ 
+        valido: false,
+        message: 'Cupom inativo' 
+      });
+    }
+    
+    // Verificar limite de usos
+    if (cupom.limite_usos > 0 && cupom.usos_atuais >= cupom.limite_usos) {
+      return res.status(400).json({ 
+        valido: false,
+        message: 'Limite de usos do cupom excedido' 
+      });
+    }
+    
+    // Verificar data de validade
+    const agora = new Date();
+    
+    if (cupom.data_inicio && new Date(cupom.data_inicio) > agora) {
+      return res.status(400).json({ 
+        valido: false,
+        message: 'Cupom ainda não está válido' 
+      });
+    }
+    
+    if (cupom.data_expiracao && new Date(cupom.data_expiracao) < agora) {
+      return res.status(400).json({ 
+        valido: false,
+        message: 'Cupom expirado' 
+      });
+    }
+    
+    // Cupom válido
+    res.json({
+      valido: true,
+      cupom: {
+        codigo: cupom.codigo,
+        tipo: cupom.tipo,
+        valor: cupom.valor,
+        descricao: cupom.descricao,
+        planos_aplicaveis: cupom.planos_aplicaveis
+      }
+    });
+    
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Aplicar uso de um cupom (incrementar contador de uso)
+// @route   PUT /api/configuracao-planos/aplicar-cupom/:codigo
+// @access  Público
+export const aplicarCupom = async (req, res) => {
+  try {
+    const { codigo } = req.params;
+    
+    // Buscar e atualizar o uso do cupom
+    const configuracao = await ConfiguracaoPlanos.findOne({
+      'cupons.codigo': codigo
+    });
+    
+    if (!configuracao) {
+      return res.status(404).json({ message: 'Cupom não encontrado' });
+    }
+    
+    // Encontrar o índice do cupom
+    const cupomIndex = configuracao.cupons.findIndex(c => c.codigo === codigo);
+    
+    if (cupomIndex === -1) {
+      return res.status(404).json({ message: 'Cupom não encontrado' });
+    }
+    
+    // Incrementar o contador de usos
+    configuracao.cupons[cupomIndex].usos_atuais += 1;
+    
+    // Salvar a configuração atualizada
+    await configuracao.save();
+    
+    res.json({ 
+      message: 'Cupom aplicado com sucesso',
+      usos_atuais: configuracao.cupons[cupomIndex].usos_atuais
+    });
+    
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -28,218 +224,6 @@ export const getConfiguracaoPlanoByNome = async (req, res) => {
   } catch (error) {
     console.error('Erro ao obter configuração de plano:', error);
     res.status(500).json({ message: 'Erro ao obter configuração de plano' });
-  }
-};
-
-// @desc    Criar uma configuração de plano
-// @route   POST /api/configuracao-planos
-// @access  Privado/Admin
-export const criarConfiguracaoPlano = async (req, res) => {
-  try {
-    const {
-      codigo,
-      nome,
-      descricao,
-      preco_mensal,
-      preco_anual,
-      plano_basico_preco_mensal,
-      plano_basico_preco_anual,
-      plano_intermediario_preco_mensal,
-      plano_intermediario_preco_anual,
-      plano_premium_preco_mensal,
-      plano_premium_preco_anual,
-      desconto_anual_porcentagem,
-      limite_conversas_diarias,
-      limite_mensagens_por_conversa,
-      agentes_disponiveis,
-      recursos_inclusos,
-      recursos_exclusivos,
-      cor_tema,
-      ativo,
-      descontoAfiliados,
-      periodoPadrao,
-      diasTesteGratis
-    } = req.body;
-
-    // Validar campos obrigatórios
-    if (!nome || !descricao || !preco_mensal || !preco_anual || !limite_conversas_diarias || !limite_mensagens_por_conversa) {
-      return res.status(400).json({
-        message: 'Por favor, preencha todos os campos obrigatórios',
-      });
-    }
-
-    // Verificar se já existe uma configuração com o mesmo nome
-    const configuracaoExistente = await ConfiguracaoPlanos.findOne({ nome });
-    if (configuracaoExistente) {
-      return res.status(400).json({
-        message: 'Já existe uma configuração de plano com este nome',
-      });
-    }
-
-    // Criar configuração
-    const configuracao = new ConfiguracaoPlanos({
-      codigo: codigo || 'config-principal',
-      nome,
-      descricao,
-      preco_mensal,
-      preco_anual,
-      // Novos campos para preços específicos de cada plano
-      plano_basico_preco_mensal: plano_basico_preco_mensal !== undefined ? Number(plano_basico_preco_mensal) : 67,
-      plano_basico_preco_anual: plano_basico_preco_anual !== undefined ? Number(plano_basico_preco_anual) : 597,
-      plano_intermediario_preco_mensal: plano_intermediario_preco_mensal !== undefined ? Number(plano_intermediario_preco_mensal) : 97,
-      plano_intermediario_preco_anual: plano_intermediario_preco_anual !== undefined ? Number(plano_intermediario_preco_anual) : 897,
-      plano_premium_preco_mensal: plano_premium_preco_mensal !== undefined ? Number(plano_premium_preco_mensal) : 197,
-      plano_premium_preco_anual: plano_premium_preco_anual !== undefined ? Number(plano_premium_preco_anual) : 1997,
-      desconto_anual_porcentagem: desconto_anual_porcentagem || 0,
-      limite_conversas_diarias,
-      limite_mensagens_por_conversa,
-      agentes_disponiveis: agentes_disponiveis || [],
-      recursos_inclusos: recursos_inclusos || [],
-      recursos_exclusivos: recursos_exclusivos || [],
-      cor_tema: cor_tema || 'blue',
-      ativo: ativo !== undefined ? ativo : true,
-      // Campos adicionais
-      descontoAfiliados: descontoAfiliados !== undefined ? Number(descontoAfiliados) : 10,
-      periodoPadrao: periodoPadrao || 'mensal',
-      diasTesteGratis: diasTesteGratis !== undefined ? Number(diasTesteGratis) : 7
-    });
-
-    const configuracaoCriada = await configuracao.save();
-    res.status(201).json(configuracaoCriada);
-  } catch (error) {
-    console.error('Erro ao criar configuração de plano:', error);
-    res.status(500).json({ message: 'Erro ao criar configuração de plano', error: error.message });
-  }
-};
-
-// @desc    Atualizar uma configuração de plano
-// @route   PUT /api/configuracao-planos/:id
-// @access  Privado/Admin
-export const atualizarConfiguracaoPlano = async (req, res) => {
-  try {
-    console.log("Atualizando configuração de plano com ID:", req.params.id);
-    console.log("Dados recebidos:", req.body);
-    
-    const {
-      nome,
-      descricao,
-      preco_mensal,
-      preco_anual,
-      plano_basico_preco_mensal,
-      plano_basico_preco_anual,
-      plano_intermediario_preco_mensal,
-      plano_intermediario_preco_anual,
-      plano_premium_preco_mensal,
-      plano_premium_preco_anual,
-      desconto_anual_porcentagem,
-      limite_conversas_diarias,
-      limite_mensagens_por_conversa,
-      agentes_disponiveis,
-      recursos_inclusos,
-      recursos_exclusivos,
-      cor_tema,
-      ativo,
-      descontoAfiliados,
-      periodoPadrao,
-      diasTesteGratis
-    } = req.body;
-
-    const configuracao = await ConfiguracaoPlanos.findById(req.params.id);
-    console.log("Configuração encontrada:", configuracao ? "Sim" : "Não");
-
-    if (configuracao) {
-      // Verificar se o nome já existe em outra configuração
-      if (nome && nome !== configuracao.nome) {
-        const configuracaoExistente = await ConfiguracaoPlanos.findOne({ nome });
-        if (configuracaoExistente) {
-          console.log("Já existe uma configuração com o nome:", nome);
-          return res.status(400).json({
-            message: 'Já existe uma configuração de plano com este nome',
-          });
-        }
-      }
-
-      // Atualizar campos
-      configuracao.nome = nome || configuracao.nome;
-      configuracao.descricao = descricao || configuracao.descricao;
-      configuracao.preco_mensal = preco_mensal !== undefined ? preco_mensal : configuracao.preco_mensal;
-      configuracao.preco_anual = preco_anual !== undefined ? preco_anual : configuracao.preco_anual;
-      
-      // Novos campos de preço específicos para cada plano
-      if (plano_basico_preco_mensal !== undefined) {
-        console.log("Atualizando plano_basico_preco_mensal:", plano_basico_preco_mensal);
-        configuracao.plano_basico_preco_mensal = Number(plano_basico_preco_mensal);
-      }
-      
-      if (plano_basico_preco_anual !== undefined) {
-        console.log("Atualizando plano_basico_preco_anual:", plano_basico_preco_anual);
-        configuracao.plano_basico_preco_anual = Number(plano_basico_preco_anual);
-      }
-      
-      if (plano_intermediario_preco_mensal !== undefined) {
-        console.log("Atualizando plano_intermediario_preco_mensal:", plano_intermediario_preco_mensal);
-        configuracao.plano_intermediario_preco_mensal = Number(plano_intermediario_preco_mensal);
-      }
-      
-      if (plano_intermediario_preco_anual !== undefined) {
-        console.log("Atualizando plano_intermediario_preco_anual:", plano_intermediario_preco_anual);
-        configuracao.plano_intermediario_preco_anual = Number(plano_intermediario_preco_anual);
-      }
-      
-      if (plano_premium_preco_mensal !== undefined) {
-        console.log("Atualizando plano_premium_preco_mensal:", plano_premium_preco_mensal);
-        configuracao.plano_premium_preco_mensal = Number(plano_premium_preco_mensal);
-      }
-      
-      if (plano_premium_preco_anual !== undefined) {
-        console.log("Atualizando plano_premium_preco_anual:", plano_premium_preco_anual);
-        configuracao.plano_premium_preco_anual = Number(plano_premium_preco_anual);
-      }
-      
-      configuracao.desconto_anual_porcentagem = desconto_anual_porcentagem !== undefined ? desconto_anual_porcentagem : configuracao.desconto_anual_porcentagem;
-      configuracao.limite_conversas_diarias = limite_conversas_diarias !== undefined ? limite_conversas_diarias : configuracao.limite_conversas_diarias;
-      configuracao.limite_mensagens_por_conversa = limite_mensagens_por_conversa !== undefined ? limite_mensagens_por_conversa : configuracao.limite_mensagens_por_conversa;
-      configuracao.agentes_disponiveis = agentes_disponiveis || configuracao.agentes_disponiveis;
-      configuracao.recursos_inclusos = recursos_inclusos || configuracao.recursos_inclusos;
-      configuracao.recursos_exclusivos = recursos_exclusivos || configuracao.recursos_exclusivos;
-      configuracao.cor_tema = cor_tema || configuracao.cor_tema;
-      configuracao.ativo = ativo !== undefined ? ativo : configuracao.ativo;
-      
-      // Campos adicionais
-      if (descontoAfiliados !== undefined) configuracao.descontoAfiliados = Number(descontoAfiliados);
-      if (periodoPadrao !== undefined) configuracao.periodoPadrao = periodoPadrao;
-      if (diasTesteGratis !== undefined) configuracao.diasTesteGratis = Number(diasTesteGratis);
-
-      console.log("Configuração antes de salvar:", configuracao);
-      const configuracaoAtualizada = await configuracao.save();
-      console.log("Configuração atualizada com sucesso:", configuracaoAtualizada);
-      res.json(configuracaoAtualizada);
-    } else {
-      console.log("Configuração não encontrada com ID:", req.params.id);
-      res.status(404).json({ message: 'Configuração de plano não encontrada' });
-    }
-  } catch (error) {
-    console.error('Erro ao atualizar configuração de plano:', error);
-    res.status(500).json({ message: 'Erro ao atualizar configuração de plano', error: error.message });
-  }
-};
-
-// @desc    Excluir uma configuração de plano
-// @route   DELETE /api/configuracao-planos/:id
-// @access  Privado/Admin
-export const excluirConfiguracaoPlano = async (req, res) => {
-  try {
-    const configuracao = await ConfiguracaoPlanos.findById(req.params.id);
-
-    if (configuracao) {
-      await configuracao.deleteOne();
-      res.json({ message: 'Configuração de plano removida' });
-    } else {
-      res.status(404).json({ message: 'Configuração de plano não encontrada' });
-    }
-  } catch (error) {
-    console.error('Erro ao excluir configuração de plano:', error);
-    res.status(500).json({ message: 'Erro ao excluir configuração de plano' });
   }
 };
 

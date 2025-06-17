@@ -49,6 +49,52 @@ const configuracaoPlanosSchema = mongoose.Schema(
       type: Number,
       default: 1997,
     },
+    // Preços originais para mostrar como riscados (ofertas)
+    plano_basico_preco_original_mensal: {
+      type: Number,
+      default: 0, // 0 = sem preço original/oferta
+    },
+    plano_basico_preco_original_anual: {
+      type: Number,
+      default: 0,
+    },
+    plano_intermediario_preco_original_mensal: {
+      type: Number,
+      default: 0,
+    },
+    plano_intermediario_preco_original_anual: {
+      type: Number,
+      default: 0,
+    },
+    plano_premium_preco_original_mensal: {
+      type: Number,
+      default: 0,
+    },
+    plano_premium_preco_original_anual: {
+      type: Number,
+      default: 0,
+    },
+    // Campos para controle de ofertas
+    oferta_ativa: {
+      type: Boolean,
+      default: false,
+    },
+    oferta_titulo: {
+      type: String,
+      default: '',
+    },
+    oferta_descricao: {
+      type: String,
+      default: '',
+    },
+    oferta_data_inicio: {
+      type: Date,
+      default: null,
+    },
+    oferta_data_fim: {
+      type: Date,
+      default: null,
+    },
     // Campos adicionais
     descontoAfiliados: {
       type: Number,
@@ -82,6 +128,52 @@ const configuracaoPlanosSchema = mongoose.Schema(
           default: false,
         },
       },
+    ],
+    // Cupons de desconto
+    cupons: [
+      {
+        codigo: {
+          type: String,
+          required: true,
+        },
+        descricao: {
+          type: String,
+          default: '',
+        },
+        tipo: {
+          type: String,
+          enum: ['percentual', 'valor_fixo'],
+          default: 'percentual',
+        },
+        valor: {
+          type: Number,
+          required: true,
+        },
+        data_inicio: {
+          type: Date,
+          default: Date.now,
+        },
+        data_expiracao: {
+          type: Date,
+          default: null,
+        },
+        limite_usos: {
+          type: Number,
+          default: 0, // 0 = ilimitado
+        },
+        usos_atuais: {
+          type: Number,
+          default: 0,
+        },
+        planos_aplicaveis: {
+          type: [String],
+          default: ['basico', 'intermediario', 'premium'], // todos os planos
+        },
+        ativo: {
+          type: Boolean,
+          default: true,
+        }
+      }
     ],
     limites: {
       conversas_por_mes: {
@@ -130,6 +222,7 @@ const configuracaoPlanosSchema = mongoose.Schema(
 // Índices para melhorar a performance das consultas
 configuracaoPlanosSchema.index({ nome: 1 });
 configuracaoPlanosSchema.index({ ativo: 1, ordem_exibicao: 1 });
+configuracaoPlanosSchema.index({ 'cupons.codigo': 1 });
 
 const ConfiguracaoPlanos = mongoose.model('ConfiguracaoPlanos', configuracaoPlanosSchema);
 

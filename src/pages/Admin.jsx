@@ -53,6 +53,7 @@ export default function Admin() {
   const [configIA, setConfigIA] = useState({});
   const [configPlanos, setConfigPlanos] = useState({});
   const [loading, setLoading] = useState(true);
+  const [loadingOfertas, setLoadingOfertas] = useState(false);
   const [editandoAgente, setEditandoAgente] = useState(null);
   const [editandoUsuario, setEditandoUsuario] = useState(null);
   const [uploadingFile, setUploadingFile] = useState(false);
@@ -115,6 +116,14 @@ export default function Admin() {
     return () => document.removeEventListener('themeChanged', handleThemeChange);
   }, []);
 
+  // Adicionar um useEffect para recarregar os dados quando o usuário muda para a aba de ofertas
+  useEffect(() => {
+    if (activeTab === "ofertas") {
+      console.log("Aba de ofertas selecionada, recarregando dados...");
+      loadConfigPlanos();
+    }
+  }, [activeTab]);
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -152,7 +161,7 @@ export default function Admin() {
       const indicacoesResponse = await Indicacao.getAll();
       setIndicacoes(indicacoesResponse || []);
       
-      // Carregar configurações
+      // Carregar configurações de planos
       await loadConfigPlanos();
       
     } catch (error) {
@@ -742,12 +751,16 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
   // Função para carregar configurações de planos
   const loadConfigPlanos = async () => {
     try {
+      setLoadingOfertas(true);
       const configsPlanos = await ConfiguracaoPlanos.getAll();
+      
+      console.log("Dados de configuração de planos carregados:", configsPlanos);
       
       if (configsPlanos && configsPlanos.length > 0) {
         // Usar a primeira configuração encontrada
         const config = configsPlanos[0];
         console.log("Configuração de planos carregada:", config);
+        console.log("Cupons encontrados:", config.cupons || []);
         
         setConfigPlanos({
           id: config._id || config.id,
@@ -758,7 +771,22 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
           plano_premium_preco_mensal: config.plano_premium_preco_mensal || 197,
           plano_premium_preco_anual: config.plano_premium_preco_anual || 1997,
           descontoAfiliados: config.descontoAfiliados || 10,
-          periodoPadrao: config.periodoPadrao || 'mensal'
+          periodoPadrao: config.periodoPadrao || 'mensal',
+          // Adicionar campos de oferta
+          oferta_ativa: config.oferta_ativa || false,
+          oferta_titulo: config.oferta_titulo || '',
+          oferta_descricao: config.oferta_descricao || '',
+          oferta_data_inicio: config.oferta_data_inicio,
+          oferta_data_fim: config.oferta_data_fim,
+          // Preços originais para ofertas
+          plano_basico_preco_original_mensal: config.plano_basico_preco_original_mensal || 0,
+          plano_basico_preco_original_anual: config.plano_basico_preco_original_anual || 0,
+          plano_intermediario_preco_original_mensal: config.plano_intermediario_preco_original_mensal || 0,
+          plano_intermediario_preco_original_anual: config.plano_intermediario_preco_original_anual || 0,
+          plano_premium_preco_original_mensal: config.plano_premium_preco_original_mensal || 0,
+          plano_premium_preco_original_anual: config.plano_premium_preco_original_anual || 0,
+          // Cupons
+          cupons: Array.isArray(config.cupons) ? config.cupons : []
         });
       } else {
         console.log("Nenhuma configuração de planos encontrada, usando valores padrão");
@@ -771,7 +799,11 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
           plano_premium_preco_mensal: 197,
           plano_premium_preco_anual: 1997,
           descontoAfiliados: 10,
-          periodoPadrao: 'mensal'
+          periodoPadrao: 'mensal',
+          oferta_ativa: false,
+          oferta_titulo: '',
+          oferta_descricao: '',
+          cupons: []
         });
       }
     } catch (error) {
@@ -790,8 +822,14 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
         plano_premium_preco_mensal: 197,
         plano_premium_preco_anual: 1997,
         descontoAfiliados: 10,
-        periodoPadrao: 'mensal'
+        periodoPadrao: 'mensal',
+        oferta_ativa: false,
+        oferta_titulo: '',
+        oferta_descricao: '',
+        cupons: []
       });
+    } finally {
+      setLoadingOfertas(false);
     }
   };
 
@@ -818,57 +856,44 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
   const afiliados = Array.isArray(usuarios) ? usuarios.filter(u => u.eh_afiliado).length : 0;
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center gap-4 mb-6">
-          <Link to={createPageUrl("Dashboard")}>
-            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full">
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-          </Link>
-          <div>
+    <div className="min-h-screen">
+      <div className="container mx-auto p-4 md:p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <Link to={createPageUrl("Dashboard")}>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+            </Link>
             <h1 className="text-3xl font-bold">
               Painel Administrativo
             </h1>
-            <p className="text-muted-foreground">
-              Gerencie usuários, agentes, configurações e mais
-            </p>
           </div>
         </div>
-
-        {/* Notificação */}
-        {notificacao.tipo && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`mb-4 p-4 rounded-lg ${
-              notificacao.tipo === 'sucesso' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-            }`}
-          >
-            <div className="flex items-center">
-              {notificacao.tipo === 'sucesso' ? (
-                <CheckCircle className="w-5 h-5 mr-2" />
-              ) : (
-                <AlertCircle className="w-5 h-5 mr-2" />
-              )}
-              {notificacao.mensagem}
-            </div>
-          </motion.div>
-        )}
-
-        <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="agentes">
-              Agentes IA
-              {sincronizacaoInfo.agentesExcedentes > 0 && (
-                <Badge className="ml-2 bg-red-500 text-white">{sincronizacaoInfo.agentesExcedentes}</Badge>
-              )}
+        
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="grid grid-cols-2 md:grid-cols-7 gap-2">
+            <TabsTrigger value="dashboard" className="flex items-center gap-2">
+              <BarChart className="w-4 h-4" /> Dashboard
             </TabsTrigger>
-            <TabsTrigger value="usuarios">Usuários</TabsTrigger>
-            <TabsTrigger value="financeiro">Financeiro</TabsTrigger>
-            <TabsTrigger value="planos">Planos</TabsTrigger>
-            <TabsTrigger value="configuracoes">Configurações</TabsTrigger>
+            <TabsTrigger value="usuarios" className="flex items-center gap-2">
+              <Users className="w-4 h-4" /> Usuários
+            </TabsTrigger>
+            <TabsTrigger value="agentes" className="flex items-center gap-2">
+              <Bot className="w-4 h-4" /> Agentes
+            </TabsTrigger>
+            <TabsTrigger value="planos" className="flex items-center gap-2">
+              <Crown className="w-4 h-4" /> Planos
+            </TabsTrigger>
+            <TabsTrigger value="ofertas" className="flex items-center gap-2">
+              <DollarSign className="w-4 h-4" /> Ofertas
+            </TabsTrigger>
+            <TabsTrigger value="indicacoes" className="flex items-center gap-2">
+              <CheckCircle className="w-4 h-4" /> Indicações
+            </TabsTrigger>
+            <TabsTrigger value="configuracoes" className="flex items-center gap-2">
+              <Settings className="w-4 h-4" /> Config
+            </TabsTrigger>
           </TabsList>
 
           {/* Dashboard Content */}
@@ -1699,6 +1724,596 @@ IMPORTANTE: Os documentos de treinamento definem sua personalidade, conhecimento
                   <Save className="w-4 h-4 mr-2" />
                   Salvar Configurações de IA
                 </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Ofertas Content */}
+          <TabsContent value="ofertas" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl font-bold flex items-center gap-2">
+                  <DollarSign className="w-5 h-5 text-primary" />
+                  Gerenciar Ofertas e Cupons
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-8">
+                  {/* Seção de Ofertas */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">Configurar Oferta</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="oferta_ativa">Status da Oferta</Label>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox 
+                            id="oferta_ativa" 
+                            checked={configPlanos.oferta_ativa || false}
+                            onCheckedChange={(checked) => {
+                              setConfigPlanos({
+                                ...configPlanos,
+                                oferta_ativa: checked
+                              });
+                            }}
+                          />
+                          <label
+                            htmlFor="oferta_ativa"
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            Oferta ativa
+                          </label>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="oferta_titulo">Título da Oferta</Label>
+                        <Input
+                          id="oferta_titulo"
+                          placeholder="Ex: Promoção de Lançamento"
+                          value={configPlanos.oferta_titulo || ''}
+                          onChange={(e) => {
+                            setConfigPlanos({
+                              ...configPlanos,
+                              oferta_titulo: e.target.value
+                            });
+                          }}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="oferta_descricao">Descrição da Oferta</Label>
+                        <Input
+                          id="oferta_descricao"
+                          placeholder="Ex: Aproveite 30% de desconto por tempo limitado"
+                          value={configPlanos.oferta_descricao || ''}
+                          onChange={(e) => {
+                            setConfigPlanos({
+                              ...configPlanos,
+                              oferta_descricao: e.target.value
+                            });
+                          }}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Período da Oferta</Label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div>
+                            <Label htmlFor="oferta_data_inicio" className="text-xs">Data Início</Label>
+                            <Input
+                              id="oferta_data_inicio"
+                              type="date"
+                              value={configPlanos.oferta_data_inicio ? new Date(configPlanos.oferta_data_inicio).toISOString().split('T')[0] : ''}
+                              onChange={(e) => {
+                                setConfigPlanos({
+                                  ...configPlanos,
+                                  oferta_data_inicio: e.target.value ? new Date(e.target.value).toISOString() : null
+                                });
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="oferta_data_fim" className="text-xs">Data Fim</Label>
+                            <Input
+                              id="oferta_data_fim"
+                              type="date"
+                              value={configPlanos.oferta_data_fim ? new Date(configPlanos.oferta_data_fim).toISOString().split('T')[0] : ''}
+                              onChange={(e) => {
+                                setConfigPlanos({
+                                  ...configPlanos,
+                                  oferta_data_fim: e.target.value ? new Date(e.target.value).toISOString() : null
+                                });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <h3 className="text-lg font-semibold mt-6 flex items-center justify-between">
+                      <span>Preços Originais (Para Exibir como Riscados)</span>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
+                        onClick={() => {
+                          // Limpar todos os preços originais
+                          setConfigPlanos({
+                            ...configPlanos,
+                            plano_basico_preco_original_mensal: 0,
+                            plano_basico_preco_original_anual: 0,
+                            plano_intermediario_preco_original_mensal: 0,
+                            plano_intermediario_preco_original_anual: 0,
+                            plano_premium_preco_original_mensal: 0,
+                            plano_premium_preco_original_anual: 0,
+                            oferta_ativa: false,
+                            oferta_titulo: '',
+                            oferta_descricao: ''
+                          });
+                        }}
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" /> Limpar Oferta
+                      </Button>
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Plano Básico</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label htmlFor="plano_basico_preco_original_mensal" className="text-xs">Preço Original Mensal</Label>
+                            <Input
+                              id="plano_basico_preco_original_mensal"
+                              type="number"
+                              placeholder="0"
+                              value={configPlanos.plano_basico_preco_original_mensal || ''}
+                              onChange={(e) => {
+                                setConfigPlanos({
+                                  ...configPlanos,
+                                  plano_basico_preco_original_mensal: e.target.value === '' ? 0 : Number(e.target.value)
+                                });
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="plano_basico_preco_original_anual" className="text-xs">Preço Original Anual</Label>
+                            <Input
+                              id="plano_basico_preco_original_anual"
+                              type="number"
+                              placeholder="0"
+                              value={configPlanos.plano_basico_preco_original_anual || ''}
+                              onChange={(e) => {
+                                setConfigPlanos({
+                                  ...configPlanos,
+                                  plano_basico_preco_original_anual: e.target.value === '' ? 0 : Number(e.target.value)
+                                });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Plano Intermediário</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label htmlFor="plano_intermediario_preco_original_mensal" className="text-xs">Preço Original Mensal</Label>
+                            <Input
+                              id="plano_intermediario_preco_original_mensal"
+                              type="number"
+                              placeholder="0"
+                              value={configPlanos.plano_intermediario_preco_original_mensal || ''}
+                              onChange={(e) => {
+                                setConfigPlanos({
+                                  ...configPlanos,
+                                  plano_intermediario_preco_original_mensal: e.target.value === '' ? 0 : Number(e.target.value)
+                                });
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="plano_intermediario_preco_original_anual" className="text-xs">Preço Original Anual</Label>
+                            <Input
+                              id="plano_intermediario_preco_original_anual"
+                              type="number"
+                              placeholder="0"
+                              value={configPlanos.plano_intermediario_preco_original_anual || ''}
+                              onChange={(e) => {
+                                setConfigPlanos({
+                                  ...configPlanos,
+                                  plano_intermediario_preco_original_anual: e.target.value === '' ? 0 : Number(e.target.value)
+                                });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Plano Premium</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <Label htmlFor="plano_premium_preco_original_mensal" className="text-xs">Preço Original Mensal</Label>
+                            <Input
+                              id="plano_premium_preco_original_mensal"
+                              type="number"
+                              placeholder="0"
+                              value={configPlanos.plano_premium_preco_original_mensal || ''}
+                              onChange={(e) => {
+                                setConfigPlanos({
+                                  ...configPlanos,
+                                  plano_premium_preco_original_mensal: e.target.value === '' ? 0 : Number(e.target.value)
+                                });
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor="plano_premium_preco_original_anual" className="text-xs">Preço Original Anual</Label>
+                            <Input
+                              id="plano_premium_preco_original_anual"
+                              type="number"
+                              placeholder="0"
+                              value={configPlanos.plano_premium_preco_original_anual || ''}
+                              onChange={(e) => {
+                                setConfigPlanos({
+                                  ...configPlanos,
+                                  plano_premium_preco_original_anual: e.target.value === '' ? 0 : Number(e.target.value)
+                                });
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Seção de Cupons */}
+                  <div className="pt-6 border-t border-border">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold">Cupons de Desconto</h3>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
+                          onClick={() => {
+                            // Remover todos os cupons
+                            if (window.confirm('Tem certeza que deseja remover todos os cupons?')) {
+                              setConfigPlanos({
+                                ...configPlanos,
+                                cupons: []
+                              });
+                            }
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" /> Remover Todos
+                        </Button>
+                        <Button 
+                          onClick={() => {
+                            // Adicionar novo cupom vazio
+                            const novosCupons = [...(configPlanos.cupons || []), {
+                              codigo: '',
+                              descricao: '',
+                              tipo: 'percentual',
+                              valor: 10,
+                              data_inicio: new Date().toISOString(),
+                              data_expiracao: null,
+                              limite_usos: 0,
+                              usos_atuais: 0,
+                              planos_aplicaveis: ['basico', 'intermediario', 'premium'],
+                              ativo: true
+                            }];
+                            
+                            setConfigPlanos({
+                              ...configPlanos,
+                              cupons: novosCupons
+                            });
+                          }}
+                          size="sm"
+                          className="bg-primary hover:bg-primary/90"
+                        >
+                          <Plus className="w-4 h-4 mr-1" /> Novo Cupom
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {Array.isArray(configPlanos.cupons) && configPlanos.cupons.length > 0 ? (
+                      <div className="space-y-4">
+                        {configPlanos.cupons.map((cupom, index) => (
+                          <Card key={index} className="border border-border">
+                            <CardContent className="p-4">
+                              <div className="flex justify-between items-start mb-4">
+                                <div className="flex items-center gap-2">
+                                  <div className="space-y-1">
+                                    <Label htmlFor={`cupom-codigo-${index}`} className="text-xs">Código do Cupom</Label>
+                                    <Input
+                                      id={`cupom-codigo-${index}`}
+                                      placeholder="CUPOM10"
+                                      value={cupom.codigo || ''}
+                                      onChange={(e) => {
+                                        const novosCupons = [...configPlanos.cupons];
+                                        novosCupons[index] = {
+                                          ...novosCupons[index],
+                                          codigo: e.target.value
+                                        };
+                                        setConfigPlanos({
+                                          ...configPlanos,
+                                          cupons: novosCupons
+                                        });
+                                      }}
+                                      className="w-full"
+                                    />
+                                  </div>
+                                  
+                                  <div className="flex items-center space-x-2 mt-6">
+                                    <Checkbox 
+                                      id={`cupom-ativo-${index}`} 
+                                      checked={cupom.ativo}
+                                      onCheckedChange={(checked) => {
+                                        const novosCupons = [...configPlanos.cupons];
+                                        novosCupons[index] = {
+                                          ...novosCupons[index],
+                                          ativo: checked
+                                        };
+                                        setConfigPlanos({
+                                          ...configPlanos,
+                                          cupons: novosCupons
+                                        });
+                                      }}
+                                    />
+                                    <label
+                                      htmlFor={`cupom-ativo-${index}`}
+                                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                    >
+                                      Ativo
+                                    </label>
+                                  </div>
+                                </div>
+                                
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    const novosCupons = [...configPlanos.cupons];
+                                    novosCupons.splice(index, 1);
+                                    setConfigPlanos({
+                                      ...configPlanos,
+                                      cupons: novosCupons
+                                    });
+                                  }}
+                                  className="text-red-500 hover:text-red-700 hover:bg-red-100"
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor={`cupom-descricao-${index}`}>Descrição</Label>
+                                  <Input
+                                    id={`cupom-descricao-${index}`}
+                                    placeholder="Descrição do cupom"
+                                    value={cupom.descricao || ''}
+                                    onChange={(e) => {
+                                      const novosCupons = [...configPlanos.cupons];
+                                      novosCupons[index] = {
+                                        ...novosCupons[index],
+                                        descricao: e.target.value
+                                      };
+                                      setConfigPlanos({
+                                        ...configPlanos,
+                                        cupons: novosCupons
+                                      });
+                                    }}
+                                  />
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label htmlFor={`cupom-tipo-${index}`}>Tipo</Label>
+                                    <Select
+                                      value={cupom.tipo || 'percentual'}
+                                      onValueChange={(value) => {
+                                        const novosCupons = [...configPlanos.cupons];
+                                        novosCupons[index] = {
+                                          ...novosCupons[index],
+                                          tipo: value
+                                        };
+                                        setConfigPlanos({
+                                          ...configPlanos,
+                                          cupons: novosCupons
+                                        });
+                                      }}
+                                    >
+                                      <SelectTrigger id={`cupom-tipo-${index}`}>
+                                        <SelectValue placeholder="Tipo de desconto" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="percentual">Percentual (%)</SelectItem>
+                                        <SelectItem value="valor_fixo">Valor Fixo (R$)</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  
+                                  <div className="space-y-2">
+                                    <Label htmlFor={`cupom-valor-${index}`}>
+                                      {cupom.tipo === 'percentual' ? 'Percentual (%)' : 'Valor (R$)'}
+                                    </Label>
+                                    <Input
+                                      id={`cupom-valor-${index}`}
+                                      type="number"
+                                      placeholder={cupom.tipo === 'percentual' ? "10" : "50"}
+                                      value={cupom.valor || ''}
+                                      onChange={(e) => {
+                                        const novosCupons = [...configPlanos.cupons];
+                                        novosCupons[index] = {
+                                          ...novosCupons[index],
+                                          valor: e.target.value === '' ? 0 : Number(e.target.value)
+                                        };
+                                        setConfigPlanos({
+                                          ...configPlanos,
+                                          cupons: novosCupons
+                                        });
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <Label>Validade</Label>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                      <Label htmlFor={`cupom-data-inicio-${index}`} className="text-xs">Data Início</Label>
+                                      <Input
+                                        id={`cupom-data-inicio-${index}`}
+                                        type="date"
+                                        value={cupom.data_inicio ? new Date(cupom.data_inicio).toISOString().split('T')[0] : ''}
+                                        onChange={(e) => {
+                                          const novosCupons = [...configPlanos.cupons];
+                                          novosCupons[index] = {
+                                            ...novosCupons[index],
+                                            data_inicio: e.target.value ? new Date(e.target.value).toISOString() : null
+                                          };
+                                          setConfigPlanos({
+                                            ...configPlanos,
+                                            cupons: novosCupons
+                                          });
+                                        }}
+                                      />
+                                    </div>
+                                    <div>
+                                      <Label htmlFor={`cupom-data-expiracao-${index}`} className="text-xs">Data Expiração</Label>
+                                      <Input
+                                        id={`cupom-data-expiracao-${index}`}
+                                        type="date"
+                                        value={cupom.data_expiracao ? new Date(cupom.data_expiracao).toISOString().split('T')[0] : ''}
+                                        onChange={(e) => {
+                                          const novosCupons = [...configPlanos.cupons];
+                                          novosCupons[index] = {
+                                            ...novosCupons[index],
+                                            data_expiracao: e.target.value ? new Date(e.target.value).toISOString() : null
+                                          };
+                                          setConfigPlanos({
+                                            ...configPlanos,
+                                            cupons: novosCupons
+                                          });
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-2">
+                                    <Label htmlFor={`cupom-limite-usos-${index}`}>Limite de Usos</Label>
+                                    <Input
+                                      id={`cupom-limite-usos-${index}`}
+                                      type="number"
+                                      placeholder="0 = ilimitado"
+                                      value={cupom.limite_usos || ''}
+                                      onChange={(e) => {
+                                        const novosCupons = [...configPlanos.cupons];
+                                        novosCupons[index] = {
+                                          ...novosCupons[index],
+                                          limite_usos: e.target.value === '' ? 0 : Number(e.target.value)
+                                        };
+                                        setConfigPlanos({
+                                          ...configPlanos,
+                                          cupons: novosCupons
+                                        });
+                                      }}
+                                    />
+                                  </div>
+                                  
+                                  <div className="space-y-2">
+                                    <Label htmlFor={`cupom-usos-atuais-${index}`}>Usos Atuais</Label>
+                                    <Input
+                                      id={`cupom-usos-atuais-${index}`}
+                                      type="number"
+                                      placeholder="0"
+                                      value={cupom.usos_atuais || ''}
+                                      onChange={(e) => {
+                                        const novosCupons = [...configPlanos.cupons];
+                                        novosCupons[index] = {
+                                          ...novosCupons[index],
+                                          usos_atuais: e.target.value === '' ? 0 : Number(e.target.value)
+                                        };
+                                        setConfigPlanos({
+                                          ...configPlanos,
+                                          cupons: novosCupons
+                                        });
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                                
+                                <div className="space-y-2 col-span-2">
+                                  <Label>Planos Aplicáveis</Label>
+                                  <div className="flex flex-wrap gap-4">
+                                    {['basico', 'intermediario', 'premium'].map((plano) => (
+                                      <div key={plano} className="flex items-center space-x-2">
+                                        <Checkbox 
+                                          id={`cupom-${index}-plano-${plano}`} 
+                                          checked={(cupom.planos_aplicaveis || []).includes(plano)}
+                                          onCheckedChange={(checked) => {
+                                            const novosCupons = [...configPlanos.cupons];
+                                            const planosAtuais = novosCupons[index].planos_aplicaveis || [];
+                                            
+                                            novosCupons[index] = {
+                                              ...novosCupons[index],
+                                              planos_aplicaveis: checked 
+                                                ? [...planosAtuais, plano]
+                                                : planosAtuais.filter(p => p !== plano)
+                                            };
+                                            
+                                            setConfigPlanos({
+                                              ...configPlanos,
+                                              cupons: novosCupons
+                                            });
+                                          }}
+                                        />
+                                        <label
+                                          htmlFor={`cupom-${index}-plano-${plano}`}
+                                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                        >
+                                          {plano.charAt(0).toUpperCase() + plano.slice(1)}
+                                        </label>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center p-8 border border-dashed border-border rounded-lg">
+                        <p className="text-muted-foreground">Nenhum cupom de desconto cadastrado.</p>
+                        <p className="text-muted-foreground text-sm mt-1">Clique em "Novo Cupom" para adicionar.</p>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-end mt-4">
+                      <Button 
+                        onClick={handleSalvarConfigPlanos}
+                        disabled={loading}
+                        className="bg-primary hover:bg-primary/90"
+                      >
+                        {loading ? (
+                          <>
+                            <RefreshCcw className="w-4 h-4 mr-2 animate-spin" />
+                            Salvando...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4 mr-2" />
+                            Salvar Cupons
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
