@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { 
   ArrowRight, 
@@ -12,9 +12,17 @@ import {
   Briefcase,
   MessageSquare,
   Zap,
-  Star
+  Star,
+  Crown,
+  TrendingUp,
+  Gift,
+  Check,
+  LogIn
 } from "lucide-react";
 import Brain3DViewer from '@/components/Brain3DModel';
+import { useState, useEffect } from 'react';
+import { ConfiguracaoPlanos } from '@/api/entities';
+import { Badge } from "@/components/ui/badge";
 
 // Header component
 const Header = () => {
@@ -37,7 +45,7 @@ const Header = () => {
         <div className="flex space-x-3">
           <Link to="/login" className="text-gray-300 hover:text-white transition-colors py-2">Login</Link>
           <Button className="bg-purple-600 hover:bg-purple-700 text-white rounded-md">
-            Começar trial grátis
+            Começar agora
           </Button>
         </div>
       </div>
@@ -85,9 +93,11 @@ const Hero = () => {
         </p>
         
         <div className="flex justify-center">
-          <Button className="bg-purple-600 hover:bg-purple-700 text-white text-lg px-8 py-6 rounded-md">
-            Iniciar trial gratuito <ArrowRight className="ml-2 h-5 w-5" />
-          </Button>
+          <Link to="/login">
+            <Button className="bg-purple-600 hover:bg-purple-700 text-white text-lg px-8 py-6 rounded-md">
+              Começar agora <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </Link>
         </div>
       </div>
     </section>
@@ -262,67 +272,218 @@ const Testimonials = () => {
 
 // Pricing section
 const Pricing = () => {
-  const plans = [
-    {
-      name: "Básico",
-      price: "R$ 67",
-      period: "/mês",
-      description: "Para quem está começando",
-      features: [
-        "4 Agentes IA Especializados",
-        "Marketing & Mídias Sociais",
-        "E-commerce Estratégico",
-        "Criação de Coleção",
-        "Fornecedores",
-        "100 Créditos/mês",
-        "Suporte por Email"
+  const navigate = useNavigate();
+  const [configPlanos, setConfigPlanos] = useState({
+    plano_basico_preco_mensal: 67,
+    plano_basico_preco_anual: 597,
+    plano_intermediario_preco_mensal: 97,
+    plano_intermediario_preco_anual: 897,
+    plano_premium_preco_mensal: 197,
+    plano_premium_preco_anual: 997,
+    plano_anual_ativo: true,
+    recursos_planos: {
+      basico: [
+        '4 Agentes IA Especializados',
+        'Marketing & Mídias Sociais',
+        'E-commerce Estratégico',
+        'Criação de Coleção',
+        'Fornecedores',
+        '100 Créditos/mês',
+        'Suporte por Email'
       ],
-      cta: "Começar trial gratuito",
-      highlighted: false,
-      anualPrice: "R$ 597/ano",
-      anualEconomy: "Economize R$ 207"
+      intermediario: [
+        '7 Agentes IA Especializados',
+        'Todos do plano Básico +',
+        'Tráfego Pago',
+        'Gestão Financeira', 
+        'Construção de Comunidade',
+        '250 Créditos/mês',
+        'Suporte Prioritário',
+        'Webinars Exclusivos'
+      ],
+      premium: [
+        'TODOS os 11 Agentes IA',
+        'IA de Geração de Imagens',
+        'Networking & Relações',
+        'Branding & Posicionamento',
+        'Experiência de Unboxing',
+        'Créditos ILIMITADOS',
+        'Suporte VIP 24/7',
+        'Consultoria Mensal 1:1',
+        'Acesso Antecipado a Novos Agentes'
+      ]
+    }
+  });
+  const [loading, setLoading] = useState(true);
+  const [selectedPeriod, setSelectedPeriod] = useState('mensal');
+  
+  useEffect(() => {
+    const fetchPlanos = async () => {
+      try {
+        const planosDataResults = await ConfiguracaoPlanos.getAll();
+        if (planosDataResults && planosDataResults.length > 0) {
+          const configData = planosDataResults[0];
+          
+          // Atualizar o estado com os valores carregados
+          setConfigPlanos({
+            plano_basico_preco_mensal: configData.plano_basico_preco_mensal || 67,
+            plano_basico_preco_anual: configData.plano_basico_preco_anual || 597,
+            plano_intermediario_preco_mensal: configData.plano_intermediario_preco_mensal || 97,
+            plano_intermediario_preco_anual: configData.plano_intermediario_preco_anual || 897,
+            plano_premium_preco_mensal: configData.plano_premium_preco_mensal || 197,
+            plano_premium_preco_anual: configData.plano_premium_preco_anual || 997,
+            plano_basico_preco_original_mensal: configData.plano_basico_preco_original_mensal || 0,
+            plano_basico_preco_original_anual: configData.plano_basico_preco_original_anual || 0,
+            plano_intermediario_preco_original_mensal: configData.plano_intermediario_preco_original_mensal || 0,
+            plano_intermediario_preco_original_anual: configData.plano_intermediario_preco_original_anual || 0,
+            plano_premium_preco_original_mensal: configData.plano_premium_preco_original_mensal || 0,
+            plano_premium_preco_original_anual: configData.plano_premium_preco_original_anual || 0,
+            oferta_ativa: configData.oferta_ativa || false,
+            oferta_titulo: configData.oferta_titulo || '',
+            oferta_descricao: configData.oferta_descricao || '',
+            plano_anual_ativo: configData.plano_anual_ativo !== false, // Se não existir, assume true
+            recursos_planos: configData.recursos_planos || {
+              basico: [
+                '4 Agentes IA Especializados',
+                'Marketing & Mídias Sociais',
+                'E-commerce Estratégico',
+                'Criação de Coleção',
+                'Fornecedores',
+                '100 Créditos/mês',
+                'Suporte por Email'
+              ],
+              intermediario: [
+                '7 Agentes IA Especializados',
+                'Todos do plano Básico +',
+                'Tráfego Pago',
+                'Gestão Financeira', 
+                'Construção de Comunidade',
+                '250 Créditos/mês',
+                'Suporte Prioritário',
+                'Webinars Exclusivos'
+              ],
+              premium: [
+                'TODOS os 11 Agentes IA',
+                'IA de Geração de Imagens',
+                'Networking & Relações',
+                'Branding & Posicionamento',
+                'Experiência de Unboxing',
+                'Créditos ILIMITADOS',
+                'Suporte VIP 24/7',
+                'Consultoria Mensal 1:1',
+                'Acesso Antecipado a Novos Agentes'
+              ]
+            }
+          });
+          
+          // Se o plano anual não estiver ativo, forçar a exibição do plano mensal
+          if (configData.plano_anual_ativo === false) {
+            setSelectedPeriod('mensal');
+          }
+        }
+      } catch (error) {
+        console.warn("Usando preços padrão, erro ao carregar configurações de planos:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPlanos();
+  }, []);
+
+  const handleEscolherPlano = () => {
+    // Redirecionar para a página de login
+    navigate('/login');
+  };
+
+  if (loading) {
+    return (
+      <section id="pricing" className="py-20 bg-black text-white relative">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-bold text-center mb-4">Carregando planos...</h2>
+        </div>
+      </section>
+    );
+  }
+
+  // Definir os planos com base nas configurações
+  const planos = [
+    {
+      id: 'basico',
+      nome: 'Básico',
+      subtitulo: 'Para quem está começando',
+      preco_mensal: configPlanos.plano_basico_preco_mensal || 67,
+      preco_anual: configPlanos.plano_basico_preco_anual || 597,
+      preco_original: Number(configPlanos.plano_basico_preco_original_mensal) || 0,
+      preco_original_anual: Number(configPlanos.plano_basico_preco_original_anual) || 0,
+      economia: (configPlanos.plano_basico_preco_mensal * 12) - (configPlanos.plano_basico_preco_anual || 597),
+      meses_gratis: ((configPlanos.plano_basico_preco_mensal * 12) - (configPlanos.plano_basico_preco_anual || 597)) / (configPlanos.plano_basico_preco_mensal || 67),
+      agentes_inclusos: 4,
+      cor: 'from-blue-500 to-cyan-600',
+      popular: false,
+      recursos: configPlanos.recursos_planos?.basico || [
+        '4 Agentes IA Especializados',
+        'Marketing & Mídias Sociais',
+        'E-commerce Estratégico',
+        'Criação de Coleção',
+        'Fornecedores',
+        '100 Créditos/mês',
+        'Suporte por Email'
+      ]
     },
     {
-      name: "Intermediário",
-      price: "R$ 97",
-      period: "/mês",
-      description: "Mais Vendido 🔥",
-      features: [
-        "7 Agentes IA Especializados",
-        "Todos do plano Básico +",
-        "Tráfego Pago",
-        "Gestão Financeira", 
-        "Construção de Comunidade",
-        "250 Créditos/mês",
-        "Suporte Prioritário",
-        "Webinars Exclusivos"
-      ],
-      cta: "Começar trial gratuito",
-      highlighted: true,
-      anualPrice: "R$ 870/ano",
-      anualEconomy: "Economize R$ 294"
+      id: 'intermediario',
+      nome: 'Intermediário',
+      subtitulo: 'Mais Vendido 🔥',
+      preco_mensal: configPlanos.plano_intermediario_preco_mensal || 97,
+      preco_anual: configPlanos.plano_intermediario_preco_anual || 897,
+      preco_original: Number(configPlanos.plano_intermediario_preco_original_mensal) || 0,
+      preco_original_anual: Number(configPlanos.plano_intermediario_preco_original_anual) || 0,
+      economia: (configPlanos.plano_intermediario_preco_mensal * 12) - (configPlanos.plano_intermediario_preco_anual || 897),
+      meses_gratis: ((configPlanos.plano_intermediario_preco_mensal * 12) - (configPlanos.plano_intermediario_preco_anual || 897)) / (configPlanos.plano_intermediario_preco_mensal || 97),
+      agentes_inclusos: 7,
+      cor: 'from-purple-500 to-indigo-600',
+      popular: true,
+      recursos: configPlanos.recursos_planos?.intermediario || [
+        '7 Agentes IA Especializados',
+        'Todos do plano Básico +',
+        'Tráfego Pago',
+        'Gestão Financeira', 
+        'Construção de Comunidade',
+        '250 Créditos/mês',
+        'Suporte Prioritário',
+        'Webinars Exclusivos'
+      ]
     },
     {
-      name: "Avançado",
-      price: "R$ 127",
-      period: "/mês",
-      description: "Para quem leva a sério 🚀",
-      features: [
-        "TODOS os 11 Agentes IA",
-        "IA de Geração de Imagens",
-        "Networking & Relações",
-        "Branding & Posicionamento",
-        "Experiência de Unboxing",
-        "Créditos ILIMITADOS",
-        "Suporte VIP 24/7",
-        "Consultoria Mensal 1:1"
-      ],
-      cta: "Começar trial gratuito",
-      highlighted: false,
-      anualPrice: "R$ 997/ano",
-      anualEconomy: "Economize R$ 527"
+      id: 'premium',
+      nome: 'Avançado',
+      subtitulo: 'Para quem leva a sério 🚀',
+      preco_mensal: configPlanos.plano_premium_preco_mensal || 197,
+      preco_anual: configPlanos.plano_premium_preco_anual || 997,
+      preco_original: Number(configPlanos.plano_premium_preco_original_mensal) || 0,
+      preco_original_anual: Number(configPlanos.plano_premium_preco_original_anual) || 0,
+      economia: (configPlanos.plano_premium_preco_mensal * 12) - (configPlanos.plano_premium_preco_anual || 997),
+      meses_gratis: ((configPlanos.plano_premium_preco_mensal * 12) - (configPlanos.plano_premium_preco_anual || 997)) / (configPlanos.plano_premium_preco_mensal || 197),
+      agentes_inclusos: 11,
+      cor: 'from-yellow-400 to-orange-500',
+      popular: false,
+      recursos: configPlanos.recursos_planos?.premium || [
+        'TODOS os 11 Agentes IA',
+        'IA de Geração de Imagens',
+        'Networking & Relações',
+        'Branding & Posicionamento',
+        'Experiência de Unboxing',
+        'Créditos ILIMITADOS',
+        'Suporte VIP 24/7',
+        'Consultoria Mensal 1:1',
+        'Acesso Antecipado a Novos Agentes'
+      ]
     }
   ];
+
+  // Verificar se o plano anual está ativo
+  const planoAnualAtivo = configPlanos.plano_anual_ativo !== false;
 
   return (
     <section id="pricing" className="py-20 bg-black text-white relative">
@@ -334,54 +495,122 @@ const Pricing = () => {
           Escolha o plano perfeito para impulsionar sua marca de roupas
         </p>
         
+        {/* Toggle Anual/Mensal - Só exibir se o plano anual estiver ativo */}
+        {planoAnualAtivo && (
+          <div className="flex justify-center mb-8">
+            <div className="bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-full p-1 inline-flex">
+              <button
+                className={`px-6 py-2 rounded-full text-sm font-medium ${selectedPeriod === 'mensal' ? 'bg-purple-600 text-white' : 'text-gray-400'}`}
+                onClick={() => setSelectedPeriod('mensal')}
+              >
+                Mensal
+              </button>
+              <button
+                className={`px-6 py-2 rounded-full text-sm font-medium ${selectedPeriod === 'anual' ? 'bg-purple-600 text-white' : 'text-gray-400'}`}
+                onClick={() => setSelectedPeriod('anual')}
+              >
+                Anual <Badge variant="outline" className="ml-1 bg-purple-600/20 border-0 text-xs">Até 2 meses grátis</Badge>
+              </button>
+            </div>
+          </div>
+        )}
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto pricing-grid">
-          {plans.map((plan, index) => (
+          {planos.map((plano, index) => (
             <div 
               key={index} 
               className={`rounded-lg p-6 relative pricing-card ${
-                plan.highlighted 
+                plano.popular 
                   ? 'bg-gradient-to-b from-purple-900/50 to-black border-2 border-purple-500'
                   : 'bg-gray-900/50 backdrop-blur-sm border border-gray-800'
               }`}
             >
-              {plan.highlighted && (
+              {plano.popular && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-purple-600 text-white text-sm font-medium py-1 px-3 rounded-full">
                   Mais popular
                 </div>
               )}
               
-              <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
-              <div className="mb-1">
-                <span className="text-3xl font-bold">{plan.price}</span>
-                <span className="text-gray-400">{plan.period}</span>
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h3 className="text-xl font-bold mb-2">{plano.nome}</h3>
+                  <p className="text-gray-400">{plano.subtitulo}</p>
+                </div>
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br ${plano.cor}`}>
+                  {plano.id === 'basico' && <TrendingUp className="w-6 h-6 text-white" />}
+                  {plano.id === 'intermediario' && <Star className="w-6 h-6 text-white" />}
+                  {plano.id === 'premium' && <Crown className="w-6 h-6 text-white" />}
+                </div>
               </div>
-              <div className="mb-4 text-sm text-purple-300">
-                <span>{plan.anualPrice} - {plan.anualEconomy}</span>
+              
+              <div className="mb-4">
+                <div className="flex items-end gap-1">
+                  <span className="text-3xl font-bold">
+                    R${selectedPeriod === 'anual' ? plano.preco_anual : plano.preco_mensal}
+                  </span>
+                  <span className="text-gray-400">{selectedPeriod === 'anual' ? '/ano' : '/mês'}</span>
+                </div>
+                
+                {/* Mostrar preço original riscado quando houver oferta */}
+                {selectedPeriod === 'anual' && configPlanos.oferta_ativa && 
+                 plano.preco_original_anual > 0 && 
+                 plano.preco_original_anual > plano.preco_anual && (
+                  <div className="mt-1">
+                    <span className="text-gray-400 line-through text-sm">
+                      De R${plano.preco_original_anual}
+                    </span>
+                    <Badge variant="outline" className="ml-2 bg-red-500/20 text-red-400 border-red-500/30">
+                      {Math.round((1 - plano.preco_anual / plano.preco_original_anual) * 100)}% OFF
+                    </Badge>
+                  </div>
+                )}
+                
+                {selectedPeriod === 'mensal' && configPlanos.oferta_ativa && 
+                 plano.preco_original > 0 && 
+                 plano.preco_original > plano.preco_mensal && (
+                  <div className="mt-1">
+                    <span className="text-gray-400 line-through text-sm">
+                      De R${plano.preco_original}
+                    </span>
+                    <Badge variant="outline" className="ml-2 bg-red-500/20 text-red-400 border-red-500/30">
+                      {Math.round((1 - plano.preco_mensal / plano.preco_original) * 100)}% OFF
+                    </Badge>
+                  </div>
+                )}
+                
+                {selectedPeriod === 'anual' && (
+                  <div className="mt-2">
+                    <span className="text-sm text-gray-400">
+                      Equivalente a R${Math.floor(plano.preco_anual / 12)}/mês
+                    </span>
+                    <Badge variant="outline" className="mt-1 block bg-green-500/20 text-green-400 border-green-500/30 w-fit">
+                      <Gift className="w-3 h-3 mr-1" />
+                      {Math.floor(plano.meses_gratis)} meses grátis
+                    </Badge>
+                  </div>
+                )}
               </div>
-              <p className="text-gray-400 mb-6">{plan.description}</p>
               
               <ul className="space-y-3 mb-8">
-                {plan.features.map((feature, i) => (
+                {plano.recursos.map((feature, i) => (
                   <li key={i} className="flex items-center">
-                    <svg className="h-5 w-5 text-green-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
+                    <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
                     <span>{feature}</span>
                   </li>
                 ))}
               </ul>
               
-              <Button className={`w-full ${
-                plan.highlighted 
-                  ? 'bg-purple-600 hover:bg-purple-700'
-                  : 'bg-gray-800 hover:bg-gray-700'
-              } text-white rounded-md`}>
-                {plan.cta}
+              <Button 
+                className={`w-full ${
+                  plano.popular 
+                    ? 'bg-purple-600 hover:bg-purple-700'
+                    : 'bg-gray-800 hover:bg-gray-700'
+                } text-white rounded-md`}
+                onClick={handleEscolherPlano}
+              >
+                <LogIn className="w-4 h-4 mr-2" />
+                Criar Conta
               </Button>
-              
-              <div className="mt-3 text-center text-xs text-gray-500">
-                Valores configuráveis pelo administrador
-              </div>
             </div>
           ))}
         </div>
@@ -406,9 +635,11 @@ const CTA = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-              <Button className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-md text-lg">
-                Começar trial de 7 dias <Rocket className="ml-2 h-5 w-5" />
-              </Button>
+              <Link to="/login">
+                <Button className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-md text-lg">
+                  Começar agora <Rocket className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
               <Button className="bg-transparent border border-white/20 hover:bg-white/10 text-white px-8 py-3 rounded-md text-lg">
                 Agendar demonstração
               </Button>

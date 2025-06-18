@@ -492,3 +492,33 @@ Na página de Planos, o sistema se comporta da seguinte forma:
    - Mantenha os recursos concisos e diretos para melhor legibilidade
    - Use linguagem consistente entre os diferentes planos
    - Destaque claramente as diferenças entre os planos 
+
+## Configuração de Planos
+
+### Planos Administrativos
+
+O sistema permite a configuração completa dos planos através do painel administrativo. As configurações incluem:
+
+1. **Preços mensais e anuais** para cada plano
+2. **Ativação/desativação do plano anual** - quando desativado, apenas os preços mensais são exibidos
+3. **Recursos de cada plano** - lista de funcionalidades incluídas em cada plano, exibidas como itens com marcadores
+
+### Exibição de Planos
+
+Os planos são exibidos em duas páginas principais:
+
+1. **Página de Planos** (`/planos`) - Página dedicada para visualização e seleção de planos
+2. **Página Inicial** (`/`) - Seção de planos na página inicial
+
+Ambas as páginas utilizam as mesmas configurações definidas pelo administrador, garantindo consistência na exibição dos planos em todo o site. Quando o administrador atualiza as configurações de planos no painel administrativo, as alterações são refletidas automaticamente em ambas as páginas.
+
+### Configurações Disponíveis
+
+- **Preços**: Valores mensais e anuais para cada plano
+- **Plano Anual**: Opção para ativar ou desativar a exibição e seleção do plano anual
+- **Recursos**: Lista de recursos para cada plano, com cada item exibido como uma linha separada
+- **Ofertas**: Configuração de preços promocionais com exibição de preços riscados
+
+## Sistema de Ofertas e Cupons
+
+// ... rest of the existing content ... 
