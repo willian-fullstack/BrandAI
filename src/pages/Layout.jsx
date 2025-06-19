@@ -18,8 +18,8 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import NotificationsPanel from '@/components/ui/notifications-panel';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { User as UserEntity } from "@/api/entities";
-import { isAdmin, logout } from "@/api/base44Client";
+import Loading from '@/components/ui/loading';
+import { getCurrentUser, isAdmin, logout } from "@/api/base44Client";
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -27,7 +27,7 @@ export default function Layout() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [userData, setUserData] = useState(null);
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -53,16 +53,24 @@ export default function Layout() {
            ));
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    } finally {
+      navigate('/login');
+    }
   };
 
   // Detectar mudanças de tema
   useEffect(() => {
     const handleThemeChange = (e) => {
-      setTheme(e.detail.theme);
+      document.documentElement.classList.toggle('dark', e.detail.theme === 'dark');
     };
+    
+    // Definir tema inicial
+    document.documentElement.classList.add('dark');
     
     document.addEventListener('themeChanged', handleThemeChange);
     return () => document.removeEventListener('themeChanged', handleThemeChange);
@@ -87,23 +95,34 @@ export default function Layout() {
 
   // Carregar dados do usuário
   useEffect(() => {
-    const loadUserData = async () => {
+    const loadUserData = () => {
       try {
-        const data = await UserEntity.me();
+        const data = getCurrentUser();
+        if (!data) {
+          navigate('/login');
+          return;
+        }
         setUserData(data);
       } catch (error) {
         console.error("Erro ao carregar dados do usuário:", error);
+        navigate('/login');
+      } finally {
+        setIsLoading(false);
       }
     };
 
     loadUserData();
-  }, []);
+  }, [navigate]);
 
   // Handler para abrir/fechar notificações
   const toggleNotifications = useCallback(() => {
     console.log("Toggle notificações, estado atual:", notificationsOpen);
     setNotificationsOpen(prevState => !prevState);
   }, [notificationsOpen]);
+
+  if (isLoading) {
+    return <Loading />;
+  }
 
   return (
     <div className="flex h-screen bg-background text-foreground">
@@ -249,99 +268,87 @@ export default function Layout() {
             <div className="relative user-menu-container">
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center w-full px-3 py-2 rounded-lg hover:bg-secondary transition-colors duration-200"
+                className="flex items-center w-full px-3 py-2 rounded-lg hover:bg-secondary transition-colors"
               >
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-purple flex items-center justify-center text-white">
-                  {userData?.nome?.charAt(0) || "U"}
+                <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                  <User size={18} className="text-primary" />
                 </div>
-                <div className="ml-3 text-left">
-                  <p className="text-sm font-medium truncate">
-                    {userData?.nome || "Usuário"}
+                <div className="ml-3 flex-1 text-left">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {userData?.nome || 'Carregando...'}
                   </p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {userData?.email || ""}
+                    {userData?.email || ''}
                   </p>
                 </div>
-                <ChevronDown size={16} className="ml-auto text-muted-foreground" />
+                <ChevronDown size={16} className="ml-2 text-muted-foreground" />
               </button>
               
-              {userMenuOpen && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  transition={{ duration: 0.2 }}
-                  className="absolute bottom-full mb-2 left-0 w-full glass-card rounded-lg shadow-lg border border-border py-1 z-50"
-                >
-                  <a
-                    href="#"
-                    className="flex items-center px-4 py-2 text-sm hover:bg-secondary transition-colors"
+              {/* Menu do usuário */}
+              <AnimatePresence>
+                {userMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute bottom-full left-0 w-full mb-2 bg-popover rounded-lg shadow-lg border border-border overflow-hidden"
                   >
-                    <User size={16} className="mr-2 text-muted-foreground" />
-                    Perfil
-                  </a>
-                  <div className="flex items-center w-full text-left px-4 py-2 text-sm hover:bg-secondary transition-colors">
-                    <ThemeToggle className="mr-2 p-0 h-auto" />
-                    {theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
-                  </div>
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-secondary transition-colors"
-                  >
-                    <LogOut size={16} className="mr-2" />
-                    Sair
-                  </button>
-                </motion.div>
-              )}
+                    <div className="py-1">
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center w-full px-4 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
+                      >
+                        <LogOut size={16} className="mr-2" />
+                        Sair
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>
       </aside>
 
       {/* Conteúdo principal */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Cabeçalho */}
-        <header className="flex h-16 items-center px-6 border-b border-border bg-card/50 backdrop-blur-sm">
+      <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
+        {/* Header */}
+        <header className="h-16 flex items-center justify-between px-6 border-b border-border bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="mr-4 text-muted-foreground hover:text-foreground lg:hidden"
+            className="text-muted-foreground hover:text-foreground lg:hidden"
           >
             <Menu size={20} />
           </button>
           
-          <div className="ml-auto flex items-center space-x-4">
-            {/* Botão de tema */}
-            <ThemeToggle />
-
-            {/* Notificações */}
+          <div className="flex items-center space-x-4">
             <div className="relative notifications-container">
               <button
                 onClick={toggleNotifications}
-                className="p-1.5 rounded-full bg-secondary hover:bg-secondary/80 text-foreground relative transition-colors"
+                className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-secondary transition-colors relative"
               >
-                <Bell size={18} />
-                <span className="absolute -top-1 -right-1 w-4 h-4 flex items-center justify-center bg-primary text-primary-foreground text-[10px] font-bold rounded-full">
-                  2
-                </span>
+                <Bell size={20} />
+                {/* Indicador de notificações */}
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               </button>
+              
+              {/* Painel de notificações */}
+              <AnimatePresence>
+                {notificationsOpen && (
+                  <NotificationsPanel onClose={() => setNotificationsOpen(false)} />
+                )}
+              </AnimatePresence>
             </div>
+            
+            <ThemeToggle />
           </div>
         </header>
-
+        
         {/* Área de conteúdo */}
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background">
           <Outlet />
         </main>
       </div>
-
-      {/* Painel de notificações (fora do fluxo normal do documento) */}
-      <NotificationsPanel 
-        isOpen={notificationsOpen} 
-        onClose={() => {
-          console.log("Fechando painel de notificações");
-          setNotificationsOpen(false);
-        }} 
-      />
     </div>
   );
 }

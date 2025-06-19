@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import Layout from './Layout';
 import Dashboard from './Dashboard';
 import Chat from './Chat';
@@ -11,15 +12,36 @@ import Login from './Login';
 import Register from './Register';
 import Diagnostico from './Diagnostico';
 import Home from './Home';
+import Loading from '@/components/ui/loading';
 import { isAuthenticated, isAdmin } from '../api/base44Client';
 import PropTypes from 'prop-types';
 
 // Componente de rota protegida
 const ProtectedRoute = ({ children }) => {
-  if (!isAuthenticated()) {
-    // Redirecionar para login se não estiver autenticado
+  const [isAuth, setIsAuth] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const auth = await isAuthenticated();
+        setIsAuth(auth);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  if (isLoading) {
+    return <Loading />;
+  }
+
+  if (!isAuth) {
     return <Navigate to="/login" replace />;
   }
+
   return children;
 };
 
@@ -30,10 +52,30 @@ ProtectedRoute.propTypes = {
 
 // Componente de rota de administrador
 const AdminRoute = ({ children }) => {
-  if (!isAuthenticated() || !isAdmin()) {
-    // Redirecionar para login se não estiver autenticado ou não for admin
+  const [isAuth, setIsAuth] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const auth = await isAuthenticated();
+        setIsAuth(auth && isAdmin());
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  if (isLoading) {
+    return <Loading />;
+  }
+
+  if (!isAuth) {
     return <Navigate to="/login" replace />;
   }
+
   return children;
 };
 

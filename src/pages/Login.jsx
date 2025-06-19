@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Sparkles, LogIn, Loader2, Moon, Sun } from "lucide-react";
 import { motion } from "framer-motion";
-import api from "../api/base44Client";
+import { login } from "../api/base44Client";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -33,11 +33,8 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const response = await api.post('/users/login', { email, password });
-      
-      // Salvar token e dados do usuário no localStorage
-      localStorage.setItem('userToken', response.data.token);
-      localStorage.setItem('userData', JSON.stringify(response.data));
+      // Usar a função login do cliente API que já implementa o gerenciamento seguro de tokens
+      await login(email, password);
       
       // Redirecionar para a rota /app após login bem-sucedido
       navigate('/app');

@@ -1,5 +1,6 @@
 import User from '../models/User.js';
-import generateToken from '../utils/generateToken.js';
+import generateToken, { generateRefreshToken } from '../utils/generateToken.js';
+import jwt from 'jsonwebtoken';
 
 // @desc    Autenticar usuário e gerar token
 // @route   POST /api/users/login
@@ -18,22 +19,61 @@ export const authUser = async (req, res) => {
       return res.status(400).json({ message: 'Senha é obrigatória' });
     }
 
-    console.log(`Tentativa de login: ${email}`);
+    // Mascarar o email nos logs para proteger dados sensíveis
+    const maskedEmail = email.replace(/(?<=.).(?=.*@)/g, '*');
+    console.log(`Tentativa de login: ${maskedEmail}`);
+    
     const user = await User.findOne({ email });
 
     if (!user) {
-      console.log(`Login falhou - usuário não encontrado: ${email}`);
+      console.log(`Login falhou - usuário não encontrado: ${maskedEmail}`);
       return res.status(401).json({ message: 'Email ou senha inválidos' });
+    }
+    
+    // Verificar se a conta está bloqueada por muitas tentativas
+    if (user.isAccountLocked()) {
+      const lockTime = new Date(user.login_attempts.locked_until);
+      const now = new Date();
+      const minutesLeft = Math.ceil((lockTime - now) / (60 * 1000));
+      
+      console.log(`Tentativa de login em conta bloqueada: ${maskedEmail}`);
+      return res.status(429).json({ 
+        message: `Conta temporariamente bloqueada por muitas tentativas. Tente novamente em ${minutesLeft} minutos.` 
+      });
     }
 
     const isMatch = await user.matchPassword(password);
 
     if (isMatch) {
+      // Login bem-sucedido - resetar contador de tentativas
+      await user.resetLoginAttempts();
+      
       // Atualizar último login
       user.ultimo_login = Date.now();
-      await user.save();
+      
+      // Gerar access token
+      const accessToken = generateToken(user._id);
+      
+      // Gerar refresh token
+      const refreshToken = generateRefreshToken(user._id);
+      
+      // Obter informações do cliente para segurança adicional
+      const userAgent = req.headers['user-agent'] || '';
+      const ip = req.ip || req.connection.remoteAddress || '';
+      
+      // Salvar refresh token no banco de dados
+      await user.addRefreshToken(refreshToken, userAgent, ip);
 
-      console.log(`Login bem-sucedido: ${email}`);
+      console.log(`Login bem-sucedido: ${maskedEmail}`);
+      
+      // Configurar o cookie HTTP-only para o refresh token
+      res.cookie('refreshToken', refreshToken.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production', // Apenas em HTTPS em produção
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias em milissegundos
+      });
+      
       res.json({
         _id: user._id,
         nome: user.nome,
@@ -46,10 +86,30 @@ export const authUser = async (req, res) => {
         creditos_restantes: user.creditos_disponiveis,
         creditos_ilimitados: user.creditos_ilimitados,
         agentes_liberados: user.agentes_liberados,
-        token: generateToken(user._id),
+        token: accessToken,
       });
     } else {
-      console.log(`Login falhou - senha incorreta: ${email}`);
+      // Registrar tentativa falha de login
+      await user.registerFailedLogin();
+      
+      // Verificar se a conta foi bloqueada após esta tentativa
+      if (user.isAccountLocked()) {
+        const lockTime = new Date(user.login_attempts.locked_until);
+        const now = new Date();
+        const minutesLeft = Math.ceil((lockTime - now) / (60 * 1000));
+        
+        console.log(`Conta bloqueada após múltiplas tentativas: ${maskedEmail}`);
+        return res.status(429).json({ 
+          message: `Conta temporariamente bloqueada por muitas tentativas. Tente novamente em ${minutesLeft} minutos.` 
+        });
+      }
+      
+      // Adicionar um pequeno atraso para dificultar ataques de força bruta
+      // O atraso aumenta com o número de tentativas falhas
+      const delayMs = 200 * (user.login_attempts.count || 1);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+      
+      console.log(`Login falhou - senha incorreta: ${maskedEmail}`);
       res.status(401).json({ message: 'Email ou senha inválidos' });
     }
   } catch (error) {
@@ -58,6 +118,80 @@ export const authUser = async (req, res) => {
       message: 'Erro ao autenticar usuário',
       errorDetails: error.message
     });
+  }
+};
+
+// @desc    Renovar token de acesso usando refresh token
+// @route   POST /api/users/refresh-token
+// @access  Público (com refresh token válido)
+export const refreshAccessToken = async (req, res) => {
+  try {
+    // Obter refresh token do cookie
+    const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
+    
+    if (!refreshToken) {
+      return res.status(401).json({ message: 'Refresh token não fornecido' });
+    }
+    
+    // Encontrar usuário com o refresh token
+    const user = await User.findOne({
+      'refresh_tokens.token': refreshToken,
+      'refresh_tokens.expiresAt': { $gt: new Date() }
+    });
+    
+    if (!user) {
+      return res.status(401).json({ message: 'Refresh token inválido ou expirado' });
+    }
+    
+    // Verificar se o token está na lista de revogados
+    const isRevoked = user.revoked_tokens && user.revoked_tokens.some(
+      token => token.token === refreshToken
+    );
+    
+    if (isRevoked) {
+      return res.status(401).json({ message: 'Refresh token foi revogado' });
+    }
+    
+    // Gerar novo access token
+    const newAccessToken = generateToken(user._id);
+    
+    res.json({
+      token: newAccessToken
+    });
+  } catch (error) {
+    console.error('Erro ao renovar token:', error);
+    res.status(500).json({ message: 'Erro ao renovar token de acesso' });
+  }
+};
+
+// @desc    Logout do usuário (revoga refresh token)
+// @route   POST /api/users/logout
+// @access  Privado
+export const logoutUser = async (req, res) => {
+  try {
+    const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
+    
+    if (!refreshToken) {
+      return res.status(200).json({ message: 'Logout realizado' });
+    }
+    
+    // Encontrar usuário com o refresh token
+    const user = await User.findOne({
+      'refresh_tokens.token': refreshToken
+    });
+    
+    if (user) {
+      // Revogar o refresh token
+      await user.revokeRefreshToken(refreshToken, 'user_logout');
+      
+      // Limpar o cookie
+      res.clearCookie('refreshToken');
+    }
+    
+    res.status(200).json({ message: 'Logout realizado com sucesso' });
+  } catch (error) {
+    console.error('Erro ao fazer logout:', error);
+    res.status(500).json({ message: 'Erro ao processar logout' });
   }
 };
 
@@ -72,7 +206,8 @@ export const registerUser = async (req, res) => {
     const userExists = await User.findOne({ email });
 
     if (userExists) {
-      console.log(`Tentativa de registro com email já existente: ${email}`);
+      const maskedEmail = email.replace(/(?<=.).(?=.*@)/g, '*');
+      console.log(`Tentativa de registro com email já existente: ${maskedEmail}`);
       return res.status(400).json({ message: 'Usuário já existe' });
     }
 
@@ -85,7 +220,30 @@ export const registerUser = async (req, res) => {
     });
 
     if (user) {
-      console.log(`Novo usuário registrado com sucesso: ${email}`);
+      const maskedEmail = email.replace(/(?<=.).(?=.*@)/g, '*');
+      console.log(`Novo usuário registrado com sucesso: ${maskedEmail}`);
+      
+      // Gerar access token
+      const accessToken = generateToken(user._id);
+      
+      // Gerar refresh token
+      const refreshToken = generateRefreshToken(user._id);
+      
+      // Obter informações do cliente
+      const userAgent = req.headers['user-agent'] || '';
+      const ip = req.ip || req.connection.remoteAddress || '';
+      
+      // Salvar refresh token
+      await user.addRefreshToken(refreshToken, userAgent, ip);
+      
+      // Configurar cookie para refresh token
+      res.cookie('refreshToken', refreshToken.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias
+      });
+      
       res.status(201).json({
         _id: user._id,
         nome: user.nome,
@@ -93,7 +251,7 @@ export const registerUser = async (req, res) => {
         role: user.role,
         plano: user.plano,
         avatar: user.avatar,
-        token: generateToken(user._id),
+        token: accessToken,
       });
     } else {
       res.status(400).json({ message: 'Dados de usuário inválidos' });
@@ -438,5 +596,44 @@ export const resetPassword = async (req, res) => {
   } catch (error) {
     console.error('Erro ao redefinir senha:', error);
     res.status(500).json({ message: 'Erro ao redefinir senha' });
+  }
+};
+
+// @desc    Gerar token de confirmação para operações administrativas críticas
+// @route   POST /api/users/admin/generate-confirmation
+// @access  Privado/Admin
+export const generateAdminConfirmationToken = async (req, res) => {
+  try {
+    if (!req.user || req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Não autorizado como administrador' });
+    }
+
+    const { operationId } = req.body;
+    
+    if (!operationId) {
+      return res.status(400).json({ message: 'ID da operação não fornecido' });
+    }
+    
+    // Gerar token de confirmação com validade de 5 minutos
+    const confirmationToken = jwt.sign(
+      { 
+        operationId,
+        userId: req.user._id,
+        timestamp: new Date().toISOString()
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '5m' }
+    );
+    
+    // Registrar a solicitação de confirmação para auditoria
+    console.log(`[AUDITORIA] Token de confirmação gerado: Admin: ${req.user.email} - IP: ${req.ip} - OperationId: ${operationId}`);
+    
+    res.json({
+      confirmationToken,
+      expiresIn: 300 // 5 minutos em segundos
+    });
+  } catch (error) {
+    console.error('Erro ao gerar token de confirmação:', error);
+    res.status(500).json({ message: 'Erro ao gerar token de confirmação' });
   }
 }; 

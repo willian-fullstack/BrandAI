@@ -387,25 +387,69 @@ export const uploadFile = async (req, res) => {
 
     const file = req.files.file;
     
-    // Verificar tipo de arquivo permitido
-    const allowedMimeTypes = [
-      'text/plain', 'text/markdown', 'text/csv', 
-      'application/json', 'text/xml', 'text/html',
-      'application/pdf', 'application/msword', 
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'image/jpeg', 'image/png', 'image/gif'
-    ];
+    // Lista branca de tipos MIME permitidos com extensões correspondentes
+    const allowedFileTypes = {
+      // Documentos de texto
+      'text/plain': ['txt'],
+      'text/markdown': ['md', 'markdown'],
+      'text/csv': ['csv'],
+      'application/json': ['json'],
+      'text/xml': ['xml'],
+      'text/html': ['html', 'htm'],
+      
+      // Documentos
+      'application/pdf': ['pdf'],
+      'application/msword': ['doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['docx'],
+      
+      // Imagens
+      'image/jpeg': ['jpg', 'jpeg'],
+      'image/png': ['png'],
+      'image/gif': ['gif'],
+      'image/webp': ['webp']
+    };
     
-    if (!allowedMimeTypes.includes(file.mimetype)) {
+    // Verificar se o tipo MIME é permitido
+    if (!Object.keys(allowedFileTypes).includes(file.mimetype)) {
       return res.status(400).json({ 
         message: 'Tipo de arquivo não permitido', 
-        allowed_types: allowedMimeTypes 
+        allowed_types: Object.keys(allowedFileTypes)
       });
     }
     
-    // Sanitizar nome do arquivo
-    const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    // Extrair extensão do arquivo
+    const fileExtension = file.name.split('.').pop().toLowerCase();
     
+    // Verificar se a extensão corresponde ao tipo MIME declarado
+    if (!allowedFileTypes[file.mimetype].includes(fileExtension)) {
+      return res.status(400).json({
+        message: 'Extensão de arquivo não corresponde ao tipo de conteúdo',
+        expected_extensions: allowedFileTypes[file.mimetype]
+      });
+    }
+    
+    // Verificar tamanho máximo (5MB para maior segurança)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      return res.status(400).json({
+        message: 'Arquivo muito grande. O tamanho máximo permitido é 5MB'
+      });
+    }
+    
+    // Sanitizar nome do arquivo removendo caracteres potencialmente perigosos
+    const sanitizedName = file.name
+      .replace(/[^a-zA-Z0-9._-]/g, '_')
+      .replace(/\.{2,}/g, '.'); // Evitar path traversal com múltiplos pontos
+    
+    // Gerar nome de arquivo único com UUID para evitar colisões
+    const crypto = await import('crypto');
+    const uniqueId = crypto.randomUUID ? 
+      crypto.randomUUID() : 
+      crypto.randomBytes(16).toString('hex');
+    
+    const fileName = `${uniqueId}-${sanitizedName}`;
+    
+    // Usar diretório fora da raiz da aplicação web
     const uploadPath = path.join(__dirname, '..', 'uploads', 'files');
     
     // Criar diretório se não existir
@@ -413,20 +457,36 @@ export const uploadFile = async (req, res) => {
       fs.mkdirSync(uploadPath, { recursive: true });
     }
     
-    // Gerar nome de arquivo único
-    const fileName = `${Date.now()}-${sanitizedName}`;
     const filePath = path.join(uploadPath, fileName);
     
-    // Verificar tamanho máximo (10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
-      return res.status(400).json({
-        message: 'Arquivo muito grande. O tamanho máximo permitido é 10MB'
-      });
+    // Verificar se o arquivo contém conteúdo malicioso (verificação básica)
+    if (file.mimetype.startsWith('text/') || file.mimetype === 'application/json') {
+      const fileContent = file.data.toString('utf8');
+      
+      // Verificar por scripts potencialmente maliciosos
+      const suspiciousPatterns = [
+        /<script.*?>.*?<\/script>/is,
+        /eval\s*\(/is,
+        /document\.cookie/is,
+        /javascript:/is,
+        /onerror=/is,
+        /onload=/is
+      ];
+      
+      for (const pattern of suspiciousPatterns) {
+        if (pattern.test(fileContent)) {
+          return res.status(400).json({
+            message: 'Conteúdo suspeito detectado no arquivo'
+          });
+        }
+      }
     }
     
     // Mover o arquivo para o diretório de uploads
     await file.mv(filePath);
+    
+    // Registrar o upload no log
+    console.log(`Arquivo carregado: ${fileName} (${file.size} bytes, tipo: ${file.mimetype}) por usuário ${req.user._id}`);
     
     // Retornar URL do arquivo
     const fileUrl = `/uploads/files/${fileName}`;

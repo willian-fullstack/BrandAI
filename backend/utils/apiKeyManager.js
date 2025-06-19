@@ -1,12 +1,14 @@
 /**
  * Utilitário para gerenciar chaves de API, incluindo rotação de chaves
  * Este módulo fornece funções para obter, validar e rotacionar chaves de API
+ * com criptografia e segurança aprimorada
  */
 
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import crypto from 'crypto';
 
 // Configurar __dirname para ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -15,8 +17,107 @@ const __dirname = path.dirname(__filename);
 // Carregar variáveis de ambiente
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-// Mapa para armazenar cache de chaves
-const apiKeyCache = new Map();
+// Estrutura para armazenar cache de chaves com tempo de expiração
+const apiKeyCache = {
+  keys: new Map(),
+  // Define o tempo de vida do cache em milissegundos (30 minutos)
+  ttl: 30 * 60 * 1000,
+  
+  // Método para definir uma chave no cache com timestamp
+  set: function(key, value) {
+    this.keys.set(key, {
+      value,
+      timestamp: Date.now()
+    });
+  },
+  
+  // Método para obter uma chave, verificando se expirou
+  get: function(key) {
+    const item = this.keys.get(key);
+    if (!item) return null;
+    
+    // Verificar se o item expirou
+    if (Date.now() - item.timestamp > this.ttl) {
+      this.keys.delete(key);
+      return null;
+    }
+    
+    return item.value;
+  },
+  
+  // Método para limpar o cache
+  clear: function() {
+    this.keys.clear();
+  }
+};
+
+/**
+ * Criptografa uma chave de API para armazenamento seguro
+ * @param {string} apiKey - Chave de API a ser criptografada
+ * @returns {string} - Chave criptografada
+ */
+const encryptApiKey = (apiKey) => {
+  if (!process.env.ENCRYPTION_KEY) {
+    throw new Error('ENCRYPTION_KEY não definida no ambiente');
+  }
+  
+  try {
+    // Criar um IV aleatório
+    const iv = crypto.randomBytes(16);
+    
+    // Criar cipher usando a chave de criptografia do ambiente e o IV
+    const cipher = crypto.createCipheriv(
+      'aes-256-cbc', 
+      Buffer.from(process.env.ENCRYPTION_KEY, 'hex'), 
+      iv
+    );
+    
+    // Criptografar a chave
+    let encrypted = cipher.update(apiKey, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    
+    // Retornar IV e texto criptografado concatenados (IV:encrypted)
+    return `${iv.toString('hex')}:${encrypted}`;
+  } catch (error) {
+    console.error('Erro ao criptografar chave de API:', error);
+    throw error;
+  }
+};
+
+/**
+ * Descriptografa uma chave de API
+ * @param {string} encryptedApiKey - Chave de API criptografada
+ * @returns {string} - Chave original
+ */
+const decryptApiKey = (encryptedApiKey) => {
+  if (!process.env.ENCRYPTION_KEY) {
+    throw new Error('ENCRYPTION_KEY não definida no ambiente');
+  }
+  
+  try {
+    // Separar IV e texto criptografado
+    const [ivHex, encryptedText] = encryptedApiKey.split(':');
+    
+    // Converter IV de hex para buffer
+    const iv = Buffer.from(ivHex, 'hex');
+    
+    // Criar decipher
+    const decipher = crypto.createDecipheriv(
+      'aes-256-cbc', 
+      Buffer.from(process.env.ENCRYPTION_KEY, 'hex'), 
+      iv
+    );
+    
+    // Descriptografar
+    let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    
+    return decrypted;
+  } catch (error) {
+    console.error('Erro ao descriptografar chave de API:', error);
+    throw error;
+  }
+};
 
 /**
  * Obter chave de API da configuração ou banco de dados
@@ -26,8 +127,9 @@ const apiKeyCache = new Map();
  */
 export const getApiKey = async (keyName, fromEnvOnly = false) => {
   // Se estiver no cache, retornar do cache
-  if (apiKeyCache.has(keyName)) {
-    return apiKeyCache.get(keyName);
+  const cachedKey = apiKeyCache.get(keyName);
+  if (cachedKey) {
+    return cachedKey;
   }
 
   // Primeira opção: variável de ambiente
@@ -44,7 +146,14 @@ export const getApiKey = async (keyName, fromEnvOnly = false) => {
         if (config) {
           // O nome da chave pode ser armazenado em diferentes formatos no banco
           if (keyName === 'OPENAI_API_KEY' && config.gpt_api_key) {
-            apiKey = config.gpt_api_key;
+            // Descriptografar a chave armazenada
+            try {
+              apiKey = decryptApiKey(config.gpt_api_key);
+            } catch (error) {
+              // Se falhar na descriptografia, pode ser que a chave ainda não esteja criptografada
+              console.warn(`Falha ao descriptografar chave ${keyName}, usando como texto simples`);
+              apiKey = config.gpt_api_key;
+            }
           }
           // Adicionar outros mapeamentos conforme necessário
         }
@@ -134,9 +243,12 @@ export const rotateApiKey = async (keyName, newApiKey) => {
       const ConfiguracaoIA = mongoose.models.ConfiguracaoIA;
       
       if (keyName === 'OPENAI_API_KEY') {
+        // Criptografar a chave antes de armazenar
+        const encryptedKey = encryptApiKey(newApiKey);
+        
         await ConfiguracaoIA.findOneAndUpdate(
           {}, 
-          { gpt_api_key: newApiKey },
+          { gpt_api_key: encryptedKey },
           { upsert: true }
         );
       }
@@ -160,9 +272,51 @@ export const clearApiKeyCache = () => {
   apiKeyCache.clear();
 };
 
+/**
+ * Migrar chaves existentes para o formato criptografado
+ * @returns {Promise<boolean>} - Se a migração foi bem-sucedida
+ */
+export const migrateToEncryptedKeys = async () => {
+  try {
+    if (!mongoose.models.ConfiguracaoIA) {
+      return false;
+    }
+    
+    const ConfiguracaoIA = mongoose.models.ConfiguracaoIA;
+    const config = await ConfiguracaoIA.findOne({});
+    
+    if (!config) {
+      return false;
+    }
+    
+    let updated = false;
+    
+    // Verificar e migrar chave OpenAI
+    if (config.gpt_api_key && !config.gpt_api_key.includes(':')) {
+      // A chave não parece estar criptografada (não contém o separador IV:encrypted)
+      const encryptedKey = encryptApiKey(config.gpt_api_key);
+      config.gpt_api_key = encryptedKey;
+      updated = true;
+    }
+    
+    // Adicionar outras chaves conforme necessário
+    
+    if (updated) {
+      await config.save();
+      console.log('Chaves de API migradas para formato criptografado');
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Erro ao migrar chaves para formato criptografado:', error);
+    return false;
+  }
+};
+
 export default {
   getApiKey,
   validateApiKey,
   rotateApiKey,
-  clearApiKeyCache
+  clearApiKeyCache,
+  migrateToEncryptedKeys
 }; 

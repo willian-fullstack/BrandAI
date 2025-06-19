@@ -6,6 +6,8 @@ import mongoose from 'mongoose';
 import fileUpload from 'express-fileupload';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 
 // Configurar __dirname para ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -26,16 +28,58 @@ dotenv.config();
 // Inicializar express
 const app = express();
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// Middleware de segurança com helmet
+app.use(helmet());
 
-// Configuração do express-fileupload
+// Configurar CSP (Content Security Policy)
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'", "https://api.openai.com"],
+    },
+  })
+);
+
+// Configuração CORS segura
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',') 
+  : ['http://localhost:3000', 'http://localhost:5173'];
+
+app.use(cors({
+  origin: function(origin, callback) {
+    // Permitir requisições sem origin (como apps mobile ou curl)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+      callback(null, true);
+    } else {
+      callback(new Error('Bloqueado pela política de CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  maxAge: 86400 // 24 horas
+}));
+
+app.use(express.json());
+app.use(cookieParser()); // Para processar cookies
+
+// Configuração do express-fileupload com opções de segurança melhoradas
 app.use(fileUpload({
   createParentPath: true,
   limits: { 
-    fileSize: 50 * 1024 * 1024 // 50MB max file size
+    fileSize: 5 * 1024 * 1024 // Reduzido para 5MB max file size
   },
+  abortOnLimit: true,
+  useTempFiles: true,
+  tempFileDir: path.join(__dirname, 'tmp'),
+  debug: process.env.NODE_ENV === 'development'
 }));
 
 // Logging em desenvolvimento
@@ -43,8 +87,19 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// Servir arquivos estáticos da pasta uploads
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Servir arquivos estáticos da pasta uploads com cabeçalhos de segurança
+app.use('/uploads', (req, res, next) => {
+  // Não permitir listagem de diretórios
+  if (req.path.endsWith('/')) {
+    return res.status(403).send('Forbidden');
+  }
+  next();
+}, express.static(path.join(__dirname, 'uploads'), {
+  maxAge: '1d',
+  setHeaders: (res) => {
+    res.set('X-Content-Type-Options', 'nosniff');
+  }
+}));
 
 // Conectar ao MongoDB
 mongoose.connect(process.env.MONGO_URI)
@@ -73,7 +128,19 @@ app.use((req, res) => {
 // Middleware para lidar com erros
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ message: 'Erro interno do servidor', error: process.env.NODE_ENV === 'development' ? err.message : {} });
+  
+  // Evitar expor detalhes de erro em produção
+  const errorResponse = {
+    message: 'Erro interno do servidor',
+    error: process.env.NODE_ENV === 'development' ? err.message : 'Ocorreu um erro. Por favor, tente novamente mais tarde.',
+    // Adicionar um ID de correlação para facilitar o rastreamento nos logs
+    correlationId: Date.now().toString(36) + Math.random().toString(36).substring(2)
+  };
+  
+  // Registrar o ID de correlação junto com o erro para facilitar o debug
+  console.error(`Erro [${errorResponse.correlationId}]:`, err.message);
+  
+  res.status(500).json(errorResponse);
 });
 
 // Iniciar servidor
