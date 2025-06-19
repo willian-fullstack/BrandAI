@@ -12,13 +12,15 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { motion } from "framer-motion"; // Importando framer-motion para animações
 import { 
-  Wand2Icon,
   TextIcon,
   PaletteIcon,
   TypeIcon,
   LayoutIcon,
-  MessageSquareIcon
+  MessageSquareIcon,
+  SparklesIcon,
+  ZapIcon
 } from "lucide-react";
 import { GenerateImageService } from '@/api/integrations'; // Serviço para gerar imagens
 
@@ -126,204 +128,259 @@ export default function DesignerInterface({ onImageGenerated, user, agenteConfig
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-y-auto pb-24">
-        <Card className="w-full h-auto border-none shadow-none">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Wand2Icon className="w-5 h-5" />
-              Gerador de Imagens
-            </CardTitle>
-            <CardDescription>
-              Crie imagens personalizadas para sua marca usando inteligência artificial
-            </CardDescription>
-          </CardHeader>
-          
-          <CardContent className="space-y-4">
-            {/* Seção de prompt */}
-            <div className="space-y-3 border p-4 rounded-lg bg-card">
-              <Label className="text-md font-medium flex items-center gap-2">
-                <MessageSquareIcon className="w-4 h-4" />
-                Descrição da imagem
-              </Label>
-              <Textarea 
-                placeholder="Descreva detalhadamente a imagem que você deseja criar..."
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                rows={3}
-                className="resize-none"
-              />
-              
-              <div className="flex flex-wrap gap-2 mt-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => suggestPrompt('logo')}
-                >
-                  Sugestão: Logotipo
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => suggestPrompt('social')}
-                >
-                  Sugestão: Redes Sociais
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => suggestPrompt('product')}
-                >
-                  Sugestão: Produto
-                </Button>
-              </div>
-            </div>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full h-auto"
+        >
+          <Card className="w-full h-auto border-none shadow-lg bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-950/30 dark:via-purple-950/30 dark:to-pink-950/30 overflow-hidden">
+            <CardHeader className="pb-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
+              <CardTitle className="text-xl flex items-center gap-2">
+                <SparklesIcon className="w-5 h-5 animate-pulse" />
+                Gerador de Imagens Mágicas
+              </CardTitle>
+              <CardDescription className="text-white/80">
+                Transforme suas ideias em arte visual com IA avançada
+              </CardDescription>
+            </CardHeader>
             
-            {/* Seção de proporção */}
-            <div className="space-y-3 border p-4 rounded-lg bg-card">
-              <Label className="text-md font-medium flex items-center gap-2">
-                <LayoutIcon className="w-4 h-4" />
-                Proporção da imagem
-              </Label>
-              <div className="grid grid-cols-3 gap-2">
-                {AVAILABLE_SIZES.map(size => (
-                  <Button 
-                    key={size.id}
-                    variant={imageSize === size.value ? "default" : "outline"}
-                    className="flex flex-col p-3 h-auto"
-                    onClick={() => setImageSize(size.value)}
-                  >
-                    <span className="text-xl mb-1">{size.icon}</span>
-                    <span className="text-sm font-medium">{size.name}</span>
-                    <span className="text-xs text-muted-foreground">{size.value}</span>
-                  </Button>
-                ))}
-              </div>
-            </div>
-            
-            {/* Seção de texto na imagem */}
-            <div className="space-y-3 border p-4 rounded-lg bg-card">
-              <div className="flex items-center justify-between">
-                <Label className="text-md font-medium flex items-center gap-2">
-                  <TextIcon className="w-4 h-4" />
-                  Texto na imagem
+            <CardContent className="space-y-6 p-6">
+              {/* Seção de prompt */}
+              <motion.div 
+                whileHover={{ scale: 1.01 }}
+                transition={{ type: "spring", stiffness: 300 }}
+                className="space-y-3 border border-purple-200 dark:border-purple-800 p-5 rounded-xl bg-white/80 dark:bg-black/20 backdrop-blur-sm shadow-sm"
+              >
+                <Label className="text-md font-medium flex items-center gap-2 text-purple-700 dark:text-purple-300">
+                  <MessageSquareIcon className="w-4 h-4" />
+                  Descrição da imagem
                 </Label>
-                <Switch
-                  id="include-text"
-                  checked={includeText}
-                  onCheckedChange={setIncludeText}
+                <Textarea 
+                  placeholder="Descreva detalhadamente a imagem que você deseja criar..."
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  rows={3}
+                  className="resize-none bg-white/50 dark:bg-black/10 border-purple-200 dark:border-purple-800 focus:border-purple-400 focus:ring-purple-400"
                 />
-              </div>
-              
-              {includeText && (
-                <div className="space-y-3 mt-2 pl-2 border-l-2 border-muted">
-                  <div className="space-y-2">
-                    <Label>Texto a ser incluído</Label>
-                    <Input
-                      placeholder="Ex: Nome da marca, slogan..."
-                      value={textOverlay}
-                      onChange={(e) => setTextOverlay(e.target.value)}
-                    />
-                    <p className="text-xs text-muted-foreground italic">
-                      O texto será incluído exatamente como digitado, em português.
-                    </p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Posição do texto</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      <Button 
-                        variant={textPosition === 'top' ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setTextPosition('top')}
-                        className="flex items-center justify-center gap-2"
-                      >
-                        <TypeIcon className="w-3 h-3" />
-                        Topo
-                      </Button>
-                      <Button 
-                        variant={textPosition === 'center' ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setTextPosition('center')}
-                        className="flex items-center justify-center gap-2"
-                      >
-                        <TypeIcon className="w-3 h-3" />
-                        Centro
-                      </Button>
-                      <Button 
-                        variant={textPosition === 'bottom' ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setTextPosition('bottom')}
-                        className="flex items-center justify-center gap-2"
-                      >
-                        <TypeIcon className="w-3 h-3" />
-                        Base
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            {/* Seção de estilos */}
-            <div className="space-y-3 border p-4 rounded-lg bg-card">
-              <Label className="text-md font-medium flex items-center gap-2">
-                <PaletteIcon className="w-4 h-4" />
-                Estilo da imagem (opcional)
-              </Label>
-              <div className="flex flex-wrap gap-2">
-                {IMAGE_STYLES.map(style => (
+                
+                <div className="flex flex-wrap gap-2 mt-2">
                   <Button 
-                    key={style}
                     variant="outline" 
                     size="sm"
-                    onClick={() => addStyleToPrompt(style)}
+                    onClick={() => suggestPrompt('logo')}
+                    className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-none hover:from-blue-600 hover:to-indigo-600 transition-all duration-300"
                   >
-                    {style}
+                    Sugestão: Logotipo
                   </Button>
-                ))}
-              </div>
-            </div>
-            
-            {/* Opção de usar documentos de treinamento */}
-            {hasDocuments && (
-              <div className="flex items-center justify-between border p-4 rounded-lg bg-card">
-                <Label htmlFor="use-docs" className="text-md font-medium">
-                  Utilizar documentos de treinamento ({agenteConfigData?.documentos_treinamento?.length})
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => suggestPrompt('social')}
+                    className="bg-gradient-to-r from-pink-500 to-rose-500 text-white border-none hover:from-pink-600 hover:to-rose-600 transition-all duration-300"
+                  >
+                    Sugestão: Redes Sociais
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => suggestPrompt('product')}
+                    className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-none hover:from-amber-600 hover:to-orange-600 transition-all duration-300"
+                  >
+                    Sugestão: Produto
+                  </Button>
+                </div>
+              </motion.div>
+              
+              {/* Seção de proporção */}
+              <motion.div 
+                whileHover={{ scale: 1.01 }}
+                transition={{ type: "spring", stiffness: 300 }}
+                className="space-y-3 border border-blue-200 dark:border-blue-800 p-5 rounded-xl bg-white/80 dark:bg-black/20 backdrop-blur-sm shadow-sm"
+              >
+                <Label className="text-md font-medium flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                  <LayoutIcon className="w-4 h-4" />
+                  Proporção da imagem
                 </Label>
-                <Switch
-                  id="use-docs"
-                  checked={usarDocumentos}
-                  onCheckedChange={setUsarDocumentos}
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                <div className="grid grid-cols-3 gap-2">
+                  {AVAILABLE_SIZES.map(size => (
+                    <Button 
+                      key={size.id}
+                      variant={imageSize === size.value ? "default" : "outline"}
+                      className={`flex flex-col p-3 h-auto transition-all duration-300 ${
+                        imageSize === size.value 
+                          ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-none shadow-md" 
+                          : "border border-blue-200 dark:border-blue-800 hover:border-blue-400"
+                      }`}
+                      onClick={() => setImageSize(size.value)}
+                    >
+                      <span className="text-xl mb-1">{size.icon}</span>
+                      <span className="text-sm font-medium">{size.name}</span>
+                      <span className={`text-xs ${imageSize === size.value ? "text-white/80" : "text-muted-foreground"}`}>{size.value}</span>
+                    </Button>
+                  ))}
+                </div>
+              </motion.div>
+              
+              {/* Seção de texto na imagem */}
+              <motion.div 
+                whileHover={{ scale: 1.01 }}
+                transition={{ type: "spring", stiffness: 300 }}
+                className="space-y-3 border border-green-200 dark:border-green-800 p-5 rounded-xl bg-white/80 dark:bg-black/20 backdrop-blur-sm shadow-sm"
+              >
+                <div className="flex items-center justify-between">
+                  <Label className="text-md font-medium flex items-center gap-2 text-green-700 dark:text-green-300">
+                    <TextIcon className="w-4 h-4" />
+                    Texto na imagem
+                  </Label>
+                  <Switch
+                    id="include-text"
+                    checked={includeText}
+                    onCheckedChange={setIncludeText}
+                    className="data-[state=checked]:bg-gradient-to-r from-green-500 to-emerald-500"
+                  />
+                </div>
+                
+                {includeText && (
+                  <div className="space-y-3 mt-2 pl-2 border-l-2 border-green-300 dark:border-green-700">
+                    <div className="space-y-2">
+                      <Label>Texto a ser incluído</Label>
+                      <Input
+                        placeholder="Ex: Nome da marca, slogan..."
+                        value={textOverlay}
+                        onChange={(e) => setTextOverlay(e.target.value)}
+                        className="bg-white/50 dark:bg-black/10 border-green-200 dark:border-green-800 focus:border-green-400 focus:ring-green-400"
+                      />
+                      <p className="text-xs text-muted-foreground italic">
+                        O texto será incluído exatamente como digitado, em português.
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label>Posição do texto</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <Button 
+                          variant={textPosition === 'top' ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setTextPosition('top')}
+                          className={`flex items-center justify-center gap-2 ${
+                            textPosition === 'top' 
+                              ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white border-none" 
+                              : "border border-green-200 dark:border-green-800"
+                          }`}
+                        >
+                          <TypeIcon className="w-3 h-3" />
+                          Topo
+                        </Button>
+                        <Button 
+                          variant={textPosition === 'center' ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setTextPosition('center')}
+                          className={`flex items-center justify-center gap-2 ${
+                            textPosition === 'center' 
+                              ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white border-none" 
+                              : "border border-green-200 dark:border-green-800"
+                          }`}
+                        >
+                          <TypeIcon className="w-3 h-3" />
+                          Centro
+                        </Button>
+                        <Button 
+                          variant={textPosition === 'bottom' ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setTextPosition('bottom')}
+                          className={`flex items-center justify-center gap-2 ${
+                            textPosition === 'bottom' 
+                              ? "bg-gradient-to-r from-green-500 to-emerald-500 text-white border-none" 
+                              : "border border-green-200 dark:border-green-800"
+                          }`}
+                        >
+                          <TypeIcon className="w-3 h-3" />
+                          Base
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+              
+              {/* Seção de estilos */}
+              <motion.div 
+                whileHover={{ scale: 1.01 }}
+                transition={{ type: "spring", stiffness: 300 }}
+                className="space-y-3 border border-pink-200 dark:border-pink-800 p-5 rounded-xl bg-white/80 dark:bg-black/20 backdrop-blur-sm shadow-sm"
+              >
+                <Label className="text-md font-medium flex items-center gap-2 text-pink-700 dark:text-pink-300">
+                  <PaletteIcon className="w-4 h-4" />
+                  Estilo da imagem
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  {IMAGE_STYLES.map(style => (
+                    <Button 
+                      key={style}
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => addStyleToPrompt(style)}
+                      className="border border-pink-200 dark:border-pink-800 hover:bg-gradient-to-r hover:from-pink-500 hover:to-rose-500 hover:text-white hover:border-transparent transition-all duration-300"
+                    >
+                      {style}
+                    </Button>
+                  ))}
+                </div>
+              </motion.div>
+              
+              {/* Opção de usar documentos de treinamento */}
+              {hasDocuments && (
+                <motion.div 
+                  whileHover={{ scale: 1.01 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                  className="flex items-center justify-between border border-amber-200 dark:border-amber-800 p-5 rounded-xl bg-white/80 dark:bg-black/20 backdrop-blur-sm shadow-sm"
+                >
+                  <Label htmlFor="use-docs" className="text-md font-medium text-amber-700 dark:text-amber-300">
+                    Utilizar documentos de treinamento ({agenteConfigData?.documentos_treinamento?.length})
+                  </Label>
+                  <Switch
+                    id="use-docs"
+                    checked={usarDocumentos}
+                    onCheckedChange={setUsarDocumentos}
+                    className="data-[state=checked]:bg-gradient-to-r from-amber-500 to-orange-500"
+                  />
+                </motion.div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
       
-      <div className="fixed bottom-0 right-0 w-full lg:w-[30%] p-4 bg-background border-t border-border z-20">
-        <Button 
-          className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 h-12 text-lg"
-          onClick={handleGenerateImage}
-          disabled={loading || !prompt || (user?.role !== 'admin' && user?.creditos_restantes <= 0)}
+      <div className="fixed bottom-0 right-0 w-full lg:w-[30%] p-4 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 backdrop-blur-md border-t border-indigo-200 dark:border-indigo-800 z-20">
+        <motion.div 
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
         >
-          {loading ? (
-            <>
-              <div className="animate-spin mr-2 h-5 w-5 border-2 border-white border-opacity-50 border-t-transparent rounded-full"></div>
-              Gerando imagem...
-            </>
-          ) : (
-            <>
-              <Wand2Icon className="mr-2 w-5 h-5" />
-              Gerar Imagem
-            </>
-          )}
-        </Button>
+          <Button 
+            className="w-full bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 h-12 text-lg shadow-lg shadow-purple-500/20 border-none transition-all duration-300"
+            onClick={handleGenerateImage}
+            disabled={loading || !prompt || (user?.role !== 'admin' && user?.creditos_restantes <= 0)}
+          >
+            {loading ? (
+              <>
+                <div className="animate-spin mr-2 h-5 w-5 border-2 border-white border-opacity-50 border-t-transparent rounded-full"></div>
+                Gerando imagem...
+              </>
+            ) : (
+              <>
+                <ZapIcon className="mr-2 w-5 h-5 animate-pulse" />
+                Gerar Imagem
+              </>
+            )}
+          </Button>
+        </motion.div>
         
         {user?.role !== 'admin' && (
-          <p className="text-xs text-muted-foreground w-full text-center mt-2">
+          <p className="text-xs text-center mt-2 bg-white/30 dark:bg-black/30 p-2 rounded-md backdrop-blur-sm">
             {user?.creditos_restantes > 0 ? 
-              `Créditos disponíveis: ${user.creditos_restantes}` : 
-              "Sem créditos disponíveis. Faça upgrade do seu plano."}
+              <span className="text-indigo-700 dark:text-indigo-300 font-medium">Créditos disponíveis: {user.creditos_restantes}</span> : 
+              <span className="text-rose-600 dark:text-rose-400">Sem créditos disponíveis. Faça upgrade do seu plano.</span>}
           </p>
         )}
       </div>

@@ -1,12 +1,10 @@
 import { useState, useEffect } from "react";
 import { User } from "@/api/entities";
 import { AgenteConfig } from "@/api/entities";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Link, useNavigate } from "react-router-dom";
-import { createPageUrl } from "@/utils";
-import { MessageSquare, Lock, ArrowRight, Crown, Zap, ArrowLeft, Bot, Sparkles, Loader2, Search, ChevronDown, CheckCircle2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Lock, ArrowRight, Zap, Bot, Sparkles, Loader2, Search, ChevronDown, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { agentesConfig, planosConfig } from "@/config/agentes";
 import { Input } from "@/components/ui/input";
@@ -187,82 +185,130 @@ export default function Agentes() {
 
       {/* Grid de Agentes */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {agentesFiltrados.map(({ codigo, nome, descricao, icon, categorias, disponivel }) => (
-          <Card 
-            key={codigo} 
-            className={`overflow-hidden transition-all duration-200 ${
-              disponivel ? 'hover:shadow-md' : 'opacity-70'
-            }`}
-          >
-            <CardContent className="p-0">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                    codigo.includes('marketing') ? 'bg-gradient-blue' :
-                    codigo.includes('visual') ? 'bg-gradient-purple' :
-                    codigo.includes('seo') ? 'bg-gradient-green' :
-                    'bg-gradient-orange'
-                  }`}>
-                    {icon ? (
-                      typeof icon === 'string' ? (
-                        <span className="text-white text-xl">{icon}</span>
-                      ) : (
-                        <icon className="h-6 w-6 text-white" />
-                      )
-                    ) : (
-                      <Bot className="h-6 w-6 text-white" />
-                    )}
-                  </div>
-                  {!disponivel && (
-                    <div className="bg-secondary text-secondary-foreground rounded-full px-3 py-1 text-xs flex items-center">
-                      <Lock className="h-3 w-3 mr-1" />
-                      Bloqueado
+        {agentesFiltrados.map(({ codigo, nome, descricao, icon, categorias, disponivel }) => {
+          // Verificar se é o Designer IA
+          const isDesigner = codigo === 'designer';
+          
+          return (
+            <motion.div
+              key={codigo}
+              whileHover={isDesigner ? { scale: 1.02 } : { scale: 1.01 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <Card 
+                className={`overflow-hidden transition-all duration-300 ${
+                  !disponivel ? 'opacity-70' : 
+                  isDesigner ? 'shadow-xl border-0 ring-2 ring-purple-300 dark:ring-purple-700' : 
+                  'hover:shadow-md'
+                } ${
+                  isDesigner ? 'relative bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-indigo-950/40 dark:via-purple-950/40 dark:to-pink-950/40' : ''
+                }`}
+              >
+                {isDesigner && disponivel && (
+                  <div className="absolute top-0 right-0 w-24 h-24 overflow-hidden">
+                    <div className="absolute top-0 right-0 transform translate-y-[-50%] translate-x-[50%] rotate-45 bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-xs font-bold py-1 px-10 shadow-lg">
+                      Destaque
                     </div>
-                  )}
-                </div>
-                
-                <h3 className="text-xl font-semibold mb-2">{nome}</h3>
-                <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
-                  {descricao}
-                </p>
-                
-                {categorias && categorias.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {categorias.map((categoria, index) => (
-                      <div 
-                        key={index}
-                        className="bg-secondary text-secondary-foreground rounded-full px-2 py-1 text-xs"
-                      >
-                        {categoria}
-                      </div>
-                    ))}
                   </div>
                 )}
-                
-                <div className="mt-auto">
-                  {disponivel ? (
-                    <Button 
-                      className="w-full"
-                      onClick={() => iniciarConversa(codigo)}
-                    >
-                      Conversar
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  ) : (
-                    <Button 
-                      variant="outline" 
-                      className="w-full"
-                      onClick={irParaPlanos}
-                    >
-                      <Sparkles className="mr-2 h-4 w-4 text-primary" />
-                      Fazer upgrade
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                <CardContent className="p-0">
+                  <div className={`p-6 ${isDesigner ? 'bg-gradient-to-br from-white/80 to-purple-50/50 dark:from-black/20 dark:to-purple-900/10' : ''}`}>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                        isDesigner ? 'bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 animate-pulse-slow shadow-lg shadow-purple-200 dark:shadow-purple-900/30' :
+                        codigo.includes('marketing') ? 'bg-gradient-blue' :
+                        codigo.includes('visual') ? 'bg-gradient-purple' :
+                        codigo.includes('seo') ? 'bg-gradient-green' :
+                        'bg-gradient-orange'
+                      }`}>
+                        {icon ? (
+                          typeof icon === 'string' ? (
+                            <span className="text-white text-xl">{icon}</span>
+                          ) : (
+                            <icon className="h-6 w-6 text-white" />
+                          )
+                        ) : (
+                          <Bot className="h-6 w-6 text-white" />
+                        )}
+                      </div>
+                      {!disponivel && (
+                        <div className="bg-secondary text-secondary-foreground rounded-full px-3 py-1 text-xs flex items-center">
+                          <Lock className="h-3 w-3 mr-1" />
+                          Bloqueado
+                        </div>
+                      )}
+                      {isDesigner && disponivel && (
+                        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-full px-3 py-1 text-xs flex items-center">
+                          <Sparkles className="h-3 w-3 mr-1" />
+                          Novo
+                        </div>
+                      )}
+                    </div>
+                    
+                    <h3 className={`text-xl font-semibold mb-2 ${isDesigner ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-transparent bg-clip-text' : ''}`}>
+                      {nome}
+                      {isDesigner && disponivel && <Sparkles className="inline-block ml-2 h-4 w-4 text-purple-500" />}
+                    </h3>
+                    <p className={`text-sm mb-4 line-clamp-2 ${isDesigner ? 'text-purple-700 dark:text-purple-300' : 'text-muted-foreground'}`}>
+                      {descricao}
+                    </p>
+                    
+                    {categorias && categorias.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {categorias.map((categoria, index) => (
+                          <div 
+                            key={index}
+                            className={`rounded-full px-2 py-1 text-xs ${
+                              isDesigner 
+                                ? 'bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800' 
+                                : 'bg-secondary text-secondary-foreground'
+                            }`}
+                          >
+                            {categoria}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <div className="mt-auto">
+                      {disponivel ? (
+                        <Button 
+                          className={`w-full ${
+                            isDesigner 
+                              ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 shadow-md shadow-purple-200 dark:shadow-purple-900/30' 
+                              : ''
+                          }`}
+                          onClick={() => iniciarConversa(codigo)}
+                        >
+                          {isDesigner ? (
+                            <>
+                              <Zap className="mr-2 h-4 w-4 animate-pulse" />
+                              Criar Imagens
+                            </>
+                          ) : (
+                            <>
+                              Conversar
+                              <ArrowRight className="ml-2 h-4 w-4" />
+                            </>
+                          )}
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="outline" 
+                          className="w-full"
+                          onClick={irParaPlanos}
+                        >
+                          <Sparkles className="mr-2 h-4 w-4 text-primary" />
+                          Fazer upgrade
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );
