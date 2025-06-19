@@ -1,6 +1,6 @@
-# BrandAI - Plataforma de IA para Marcas
+# BrandzLAB - Plataforma de IA para Marcas
 
-BrandAI é uma plataforma de inteligência artificial especializada para marcas de roupas, integrando diversos agentes de IA com expertises específicas para auxiliar negócios do setor de moda.
+BrandzLAB é uma plataforma de inteligência artificial especializada para marcas de roupas, integrando diversos agentes de IA com expertises específicas para auxiliar negócios do setor de moda.
 
 ## Características Principais
 
@@ -101,8 +101,8 @@ Corrigimos diversos problemas relacionados à interface do usuário e à renderi
 
 1. Clone o repositório:
    ```
-   git clone https://github.com/willian-fullstack/BrandAI.git
-   cd BrandAI
+   git clone https://github.com/willian-fullstack/BrandzLAB.git
+   cd BrandzLAB
    ```
 
 2. Instale as dependências:

@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Sparkles, LogIn, Loader2, Moon, Sun } from "lucide-react";
+import { Moon, Sun, Loader2, LogIn } from "lucide-react";
 import { motion } from "framer-motion";
 import { login } from "../api/base44Client";
 
@@ -77,29 +77,24 @@ export default function Login() {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md z-10"
       >
-        <div className="flex justify-center mb-6">
-          <motion.div 
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            transition={{ 
-              type: "spring", 
-              stiffness: 260, 
-              damping: 20,
-              delay: 0.2
-            }}
-            className="w-16 h-16 bg-gradient-purple rounded-xl flex items-center justify-center shadow-glow animate-pulse-slow"
-          >
-            <Sparkles className="w-8 h-8 text-white" />
-          </motion.div>
+        <div className="flex flex-col items-center space-y-4 mb-8">
+          <div className="flex items-center">
+            <img src="/img/logo.png" alt="BrandzLAB Logo" className="h-8 w-8 mr-2" />
+            <span className="text-2xl font-bold">
+              <span className="text-[#00b6ff]" style={{ fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 'bold' }}>Brandz</span>
+              <span className="text-[#736ded]" style={{ fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 'bold' }}>LAB</span>
+            </span>
+          </div>
+          <h1 className="text-2xl font-bold text-center">Entrar na sua conta</h1>
         </div>
         
         <Card className="glass-card border-border shadow-glass backdrop-blur-lg">
           <CardHeader className="space-y-1 text-center pb-2">
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-              BrandAI
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-[#00b6ff] to-[#736ded] bg-clip-text text-transparent">
+              Entrar
             </CardTitle>
             <CardDescription className="text-muted-foreground">
-              Entre com sua conta para acessar os agentes IA
+              Acesse sua conta no BrandzLAB
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-4">
@@ -153,7 +148,7 @@ export default function Login() {
               
               <Button 
                 type="submit" 
-                className="w-full bg-gradient-purple hover:opacity-90 transition-all duration-300"
+                className="w-full bg-[#736ded] hover:bg-[#6058db] transition-all duration-300"
                 disabled={loading}
               >
                 {loading ? (
@@ -187,8 +182,8 @@ export default function Login() {
           </CardFooter>
         </Card>
         
-        <div className="mt-8 text-center text-xs text-muted-foreground">
-          © 2023 BrandAI. Todos os direitos reservados.
+        <div className="mt-8 text-center text-sm text-gray-500">
+          <p>© {new Date().getFullYear()} BrandzLAB. Todos os direitos reservados.</p>
         </div>
       </motion.div>
     </div>

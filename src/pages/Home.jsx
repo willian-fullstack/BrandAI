@@ -27,11 +27,14 @@ import { Badge } from "@/components/ui/badge";
 // Header component
 const Header = () => {
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-black/70 backdrop-blur-md navbar-blur border-b border-purple-900/20">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-black/70 backdrop-blur-md navbar-blur border-b border-[#736ded]/20">
       <div className="container mx-auto px-4 py-4 flex justify-between items-center">
         <div className="flex items-center">
-          <Shirt className="h-6 w-6 text-purple-500" />
-          <span className="ml-2 text-xl font-bold bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent">BrandAI</span>
+          <img src="/img/logo.png" alt="BrandzLAB Logo" className="h-8 w-8 mr-2" />
+          <span className="ml-2 text-xl font-bold">
+            <span className="text-[#00b6ff]" style={{ fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 'bold' }}>Brandz</span>
+            <span className="text-[#736ded]" style={{ fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 'bold' }}>LAB</span>
+          </span>
         </div>
         
         <div className="hidden md:flex space-x-6">
@@ -44,7 +47,7 @@ const Header = () => {
 
         <div className="flex space-x-3">
           <Link to="/login" className="text-gray-300 hover:text-white transition-colors py-2">Login</Link>
-          <Button className="bg-purple-600 hover:bg-purple-700 text-white rounded-md">
+          <Button className="bg-[#736ded] hover:bg-[#6058db] text-white rounded-md">
             Começar agora
           </Button>
         </div>
@@ -71,30 +74,38 @@ const Hero = () => {
       {/* New feature badge */}
       <div className="container mx-auto px-4 relative z-10 flex flex-col items-center justify-center">
         <div className="flex justify-center mb-6">
-          <div className="flex items-center space-x-2 bg-black/50 border border-purple-500/30 rounded-full px-3 py-1">
+          <div className="flex items-center space-x-2 bg-black/50 border border-[#736ded]/30 rounded-full px-3 py-1">
             <span className="flex h-2 w-2 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#736ded] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#736ded]"></span>
             </span>
             <p className="text-sm text-gray-200">Novo: 11 Agentes de IA Especializados em Moda</p>
           </div>
         </div>
         
         <h1 className="text-5xl md:text-6xl font-bold text-center leading-tight mb-6 hero-heading">
-          IA Especializada para <span className="bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent">Marcas de Moda</span>
+          IA Especializada para <span className="bg-gradient-to-r from-[#00b6ff] to-[#736ded] bg-clip-text text-transparent">Marcas de Moda</span>
         </h1>
+        
+        <div className="flex items-center justify-center mb-6">
+          <img src="/img/logo.png" alt="BrandzLAB Logo" className="h-16 w-16 mr-3" />
+          <h2 className="text-4xl font-bold">
+            <span className="text-[#00b6ff]" style={{ fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 'bold' }}>Brandz</span>
+            <span className="text-[#736ded]" style={{ fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 'bold' }}>LAB</span>
+          </h2>
+        </div>
         
         <p className="text-xl text-gray-300 text-center mb-6 max-w-2xl mx-auto">
           Múltiplos agentes de IA com expertise em marketing, e-commerce, design, fornecedores e muito mais
         </p>
         
         <p className="text-base text-gray-400 text-center mb-10 max-w-3xl mx-auto">
-          Marcas usando o BrandAI relatam aumento de até 73% nas vendas online e redução de 26% nos custos de produção
+          Marcas usando o BrandzLAB relatam aumento de até 73% nas vendas online e redução de 26% nos custos de produção
         </p>
         
         <div className="flex justify-center">
           <Link to="/login">
-            <Button className="bg-purple-600 hover:bg-purple-700 text-white text-lg px-8 py-6 rounded-md">
+            <Button className="bg-[#736ded] hover:bg-[#6058db] text-white text-lg px-8 py-6 rounded-md">
               Começar agora <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>
@@ -113,12 +124,12 @@ const Agentes = () => {
       description: "Estratégias para Instagram, TikTok e outras redes sociais. Criação de conteúdo viral, campanhas de engajamento e crescimento orgânico."
     },
     {
-      icon: <ShoppingBag className="h-8 w-8 text-blue-500" />,
+      icon: <ShoppingBag className="h-8 w-8 text-[#00b6ff]" />,
       title: "E-commerce Estratégico",
       description: "Otimização de vendas online e conversão. Funis de venda, checkout otimizado e estratégias de upsell."
     },
     {
-      icon: <Star className="h-8 w-8 text-purple-500" />,
+      icon: <Star className="h-8 w-8 text-[#736ded]" />,
       title: "Criação de Coleção",
       description: "Desenvolvimento de produtos e tendências. Pesquisa de mercado, design de produtos e lançamentos estratégicos."
     },
@@ -149,7 +160,7 @@ const Agentes = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 feature-grid">
           {agentes.map((agente, index) => (
-            <div key={index} className="bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-lg p-6 hover:border-purple-500/50 transition-colors feature-card">
+            <div key={index} className="bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-lg p-6 hover:border-[#736ded]/50 transition-colors feature-card">
               <div className="mb-4">{agente.icon}</div>
               <h3 className="text-xl font-semibold text-white mb-3">{agente.title}</h3>
               <p className="text-gray-400">{agente.description}</p>
@@ -165,19 +176,19 @@ const Agentes = () => {
 const Features = () => {
   const features = [
     {
-      icon: <MessageSquare className="h-8 w-8 text-purple-500" />,
+      icon: <MessageSquare className="h-8 w-8 text-[#736ded]" />,
       title: "Chat Intuitivo",
       description: "Interface de chat intuitiva para comunicação com agentes de IA especializados em diferentes aspectos do seu negócio de moda."
     },
     {
       icon: <Zap className="h-8 w-8 text-yellow-500" />,
-      title: "Documentos de Treinamento",
-      description: "Upload de documentos para personalizar os agentes com conhecimento específico sobre sua marca, produtos e público-alvo."
+      title: "Análise de Tendências",
+      description: "Acompanhe as últimas tendências de moda e receba insights sobre como adaptar sua marca para se manter à frente da concorrência."
     },
     {
-      icon: <Briefcase className="h-8 w-8 text-blue-500" />,
-      title: "Painel Administrativo",
-      description: "Gerencie usuários, planos e configurações. Acesse estatísticas de uso e personalize valores de planos através do painel admin."
+      icon: <Briefcase className="h-8 w-8 text-[#00b6ff]" />,
+      title: "Gestão de Projetos",
+      description: "Organize suas coleções, campanhas e lançamentos com ferramentas integradas de gestão de projetos para equipes de moda."
     },
     {
       icon: <Code className="h-8 w-8 text-green-500" />,
@@ -196,7 +207,7 @@ const Features = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 feature-grid">
           {features.map((feature, index) => (
-            <div key={index} className="bg-black/50 backdrop-blur-sm border border-gray-800 rounded-lg p-6 hover:border-purple-500/50 transition-colors feature-card">
+            <div key={index} className="bg-black/50 backdrop-blur-sm border border-gray-800 rounded-lg p-6 hover:border-[#736ded]/50 transition-colors feature-card">
               <div className="mb-4">{feature.icon}</div>
               <h3 className="text-xl font-semibold text-white mb-3">{feature.title}</h3>
               <p className="text-gray-400">{feature.description}</p>
@@ -212,30 +223,33 @@ const Features = () => {
 const Testimonials = () => {
   const testimonials = [
     {
-      text: "O BrandAI transformou minha marca de roupas! Com os agentes de Marketing e E-commerce, conseguimos aumentar nossas vendas online em 73% em apenas 3 meses. A análise de dados e estratégias são incomparáveis.",
+      text: "O BrandzLAB transformou minha marca de roupas! Com os agentes de Marketing e E-commerce, conseguimos aumentar nossas vendas online em 73% em apenas 3 meses. A análise de dados e estratégias são incomparáveis.",
       name: "Carolina Silva",
-      position: "Fundadora, ModaFit Brasil"
+      position: "Fundadora, ModaFit Brasil",
+      image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80"
     },
     {
       text: "Os agentes especializados de Fornecedores e Gestão Financeira me ajudaram a reduzir custos de produção em 26% e otimizar nosso fluxo de caixa. Uma ferramenta essencial para qualquer marca de moda.",
       name: "Ricardo Mendes",
-      position: "CEO, Urban Clothing Co."
+      position: "CEO, Urban Clothing Co.",
+      image: "https://images.unsplash.com/photo-1560250097-0b93528c311a?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80"
     },
     {
       text: "O agente de Criação de Coleção nos ajudou a desenvolver uma linha que se tornou nosso maior sucesso de vendas. A plataforma se paga em ideias inovadoras e economia de tempo.",
       name: "Mariana Costa",
-      position: "Diretora Criativa, Essence Apparel"
+      position: "Diretora Criativa, Essence Apparel",
+      image: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?ixlib=rb-1.2.1&auto=format&fit=crop&w=200&q=80"
     }
   ];
 
   return (
     <section className="py-20 bg-black text-white relative">
-      <div className="absolute top-1/3 right-0 w-[300px] h-[300px] rounded-full bg-purple-600/10 blur-[100px] z-0"></div>
+      <div className="absolute top-1/3 right-0 w-[300px] h-[300px] rounded-full bg-[#736ded]/10 blur-[100px] z-0"></div>
       
       <div className="container mx-auto px-4 relative z-10">
         <h2 className="text-3xl font-bold text-center mb-4">O que nossos clientes dizem</h2>
         <p className="text-xl text-gray-400 text-center mb-12 max-w-2xl mx-auto">
-          Marcas de roupas que já estão colhendo resultados com o BrandAI
+          Marcas de roupas que já estão colhendo resultados com o BrandzLAB
         </p>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -254,8 +268,12 @@ const Testimonials = () => {
               </p>
               
               <div className="flex items-center">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-purple-400 to-purple-600 flex items-center justify-center text-white font-bold">
-                  {testimonial.name.charAt(0)}
+                <div className="h-10 w-10 rounded-full overflow-hidden bg-gradient-to-r from-[#00b6ff] to-[#736ded]">
+                  <img 
+                    src={testimonial.image} 
+                    alt={testimonial.name} 
+                    className="h-full w-full object-cover"
+                  />
                 </div>
                 <div className="ml-3">
                   <p className="text-white font-medium">{testimonial.name}</p>
@@ -419,7 +437,7 @@ const Pricing = () => {
       economia: (configPlanos.plano_basico_preco_mensal * 12) - (configPlanos.plano_basico_preco_anual || 597),
       meses_gratis: ((configPlanos.plano_basico_preco_mensal * 12) - (configPlanos.plano_basico_preco_anual || 597)) / (configPlanos.plano_basico_preco_mensal || 67),
       agentes_inclusos: 4,
-      cor: 'from-blue-500 to-cyan-600',
+      cor: 'from-[#00b6ff] to-[#0096d4]',
       popular: false,
       recursos: configPlanos.recursos_planos?.basico || [
         '4 Agentes IA Especializados',
@@ -442,7 +460,7 @@ const Pricing = () => {
       economia: (configPlanos.plano_intermediario_preco_mensal * 12) - (configPlanos.plano_intermediario_preco_anual || 897),
       meses_gratis: ((configPlanos.plano_intermediario_preco_mensal * 12) - (configPlanos.plano_intermediario_preco_anual || 897)) / (configPlanos.plano_intermediario_preco_mensal || 97),
       agentes_inclusos: 7,
-      cor: 'from-purple-500 to-indigo-600',
+      cor: 'from-[#736ded] to-[#5a55c9]',
       popular: true,
       recursos: configPlanos.recursos_planos?.intermediario || [
         '7 Agentes IA Especializados',
@@ -487,7 +505,7 @@ const Pricing = () => {
 
   return (
     <section id="pricing" className="py-20 bg-black text-white relative">
-      <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] rounded-full bg-purple-600/10 blur-[120px] z-0"></div>
+      <div className="absolute bottom-0 left-1/4 w-[400px] h-[400px] rounded-full bg-[#736ded]/10 blur-[120px] z-0"></div>
       
       <div className="container mx-auto px-4 relative z-10">
         <h2 className="text-3xl font-bold text-center mb-4">Planos para cada estágio da sua marca</h2>
@@ -500,16 +518,16 @@ const Pricing = () => {
           <div className="flex justify-center mb-8">
             <div className="bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-full p-1 inline-flex">
               <button
-                className={`px-6 py-2 rounded-full text-sm font-medium ${selectedPeriod === 'mensal' ? 'bg-purple-600 text-white' : 'text-gray-400'}`}
+                className={`px-6 py-2 rounded-full text-sm font-medium ${selectedPeriod === 'mensal' ? 'bg-[#736ded] text-white' : 'text-gray-400'}`}
                 onClick={() => setSelectedPeriod('mensal')}
               >
                 Mensal
               </button>
               <button
-                className={`px-6 py-2 rounded-full text-sm font-medium ${selectedPeriod === 'anual' ? 'bg-purple-600 text-white' : 'text-gray-400'}`}
+                className={`px-6 py-2 rounded-full text-sm font-medium ${selectedPeriod === 'anual' ? 'bg-[#736ded] text-white' : 'text-gray-400'}`}
                 onClick={() => setSelectedPeriod('anual')}
               >
-                Anual <Badge variant="outline" className="ml-1 bg-purple-600/20 border-0 text-xs">Até 2 meses grátis</Badge>
+                Anual <Badge variant="outline" className="ml-1 bg-[#736ded]/20 border-0 text-xs">Até 2 meses grátis</Badge>
               </button>
             </div>
           </div>
@@ -521,12 +539,12 @@ const Pricing = () => {
               key={index} 
               className={`rounded-lg p-6 relative pricing-card ${
                 plano.popular 
-                  ? 'bg-gradient-to-b from-purple-900/50 to-black border-2 border-purple-500'
+                  ? 'bg-gradient-to-b from-[#736ded]/30 to-black border-2 border-[#736ded]'
                   : 'bg-gray-900/50 backdrop-blur-sm border border-gray-800'
               }`}
             >
               {plano.popular && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-purple-600 text-white text-sm font-medium py-1 px-3 rounded-full">
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-[#736ded] text-white text-sm font-medium py-1 px-3 rounded-full">
                   Mais popular
                 </div>
               )}
@@ -603,7 +621,7 @@ const Pricing = () => {
               <Button 
                 className={`w-full ${
                   plano.popular 
-                    ? 'bg-purple-600 hover:bg-purple-700'
+                    ? 'bg-[#736ded] hover:bg-[#6058db]'
                     : 'bg-gray-800 hover:bg-gray-700'
                 } text-white rounded-md`}
                 onClick={handleEscolherPlano}
@@ -624,9 +642,9 @@ const CTA = () => {
   return (
     <section className="py-20 bg-black text-white relative">
       <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto bg-gradient-to-r from-purple-900/50 to-black backdrop-blur-sm border border-purple-500/30 rounded-xl p-12 relative overflow-hidden">
-          <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-purple-600/30 blur-[50px]"></div>
-          <div className="absolute -bottom-24 -left-24 w-48 h-48 rounded-full bg-purple-600/30 blur-[50px]"></div>
+        <div className="max-w-4xl mx-auto bg-gradient-to-r from-[#736ded]/30 to-black backdrop-blur-sm border border-[#736ded]/30 rounded-xl p-12 relative overflow-hidden">
+          <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-[#736ded]/30 blur-[50px]"></div>
+          <div className="absolute -bottom-24 -left-24 w-48 h-48 rounded-full bg-[#00b6ff]/30 blur-[50px]"></div>
           
           <div className="relative z-10">
             <h2 className="text-3xl font-bold mb-4 text-center">Pronto para transformar sua marca de moda?</h2>
@@ -636,7 +654,7 @@ const CTA = () => {
             
             <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
               <Link to="/login">
-                <Button className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-md text-lg">
+                <Button className="bg-[#736ded] hover:bg-[#6058db] text-white px-8 py-3 rounded-md text-lg">
                   Começar agora <Rocket className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
@@ -659,8 +677,11 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
             <div className="flex items-center mb-4">
-              <Shirt className="h-6 w-6 text-purple-500" />
-              <span className="ml-2 text-xl font-bold bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent">BrandAI</span>
+              <img src="/img/logo.png" alt="BrandzLAB Logo" className="h-6 w-6 mr-2" />
+              <span className="ml-2 text-xl font-bold">
+                <span className="text-[#00b6ff]" style={{ fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 'bold' }}>Brandz</span>
+                <span className="text-[#736ded]" style={{ fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 'bold' }}>LAB</span>
+              </span>
             </div>
             <p className="text-gray-400 mb-4">
               Plataforma de IA especializada para marcas de roupas, integrando diversos agentes com expertises específicas.
@@ -716,7 +737,7 @@ const Footer = () => {
         </div>
         
         <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
-          <p>&copy; {new Date().getFullYear()} BrandAI. Todos os direitos reservados.</p>
+          <p>&copy; {new Date().getFullYear()} BrandzLAB. Todos os direitos reservados.</p>
         </div>
       </div>
     </footer>

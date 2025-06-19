@@ -148,10 +148,11 @@ export default function Layout() {
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between h-16 px-6 border-b border-border">
             <Link to="/app" className="flex items-center">
-              <div className="w-8 h-8 rounded-md bg-gradient-purple flex items-center justify-center text-white font-bold text-lg">
-                B
-              </div>
-              <span className="ml-2 text-xl font-bold text-foreground">BrandAI</span>
+              <img src="/img/logo.png" alt="BrandzLAB Logo" className="h-6 w-6 mr-2" />
+              <span className="ml-2 text-xl font-bold">
+                <span className="text-[#00b6ff]" style={{ fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 'bold' }}>Brandz</span>
+                <span className="text-[#736ded]" style={{ fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 'bold' }}>LAB</span>
+              </span>
             </Link>
             <button
               onClick={() => setSidebarOpen(false)}
@@ -321,7 +322,7 @@ export default function Layout() {
             <Menu size={20} />
           </button>
           
-          <div className="flex items-center space-x-4">
+          <div className="ml-auto flex items-center space-x-4">
             <div className="relative notifications-container">
               <button
                 onClick={toggleNotifications}
@@ -335,11 +336,10 @@ export default function Layout() {
               {/* Painel de notificações */}
               <AnimatePresence>
                 {notificationsOpen && (
-                  <NotificationsPanel onClose={() => setNotificationsOpen(false)} />
+                  <NotificationsPanel isOpen={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
                 )}
               </AnimatePresence>
             </div>
-            
             <ThemeToggle />
           </div>
         </header>

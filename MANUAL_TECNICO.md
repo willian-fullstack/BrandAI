@@ -1,4 +1,4 @@
-# Manual Técnico - BrandAI
+# Manual Técnico - BrandzLAB
 
 ## Visualização 3D do Cérebro
 

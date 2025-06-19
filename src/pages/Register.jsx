@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Sparkles, UserPlus, Loader2, Moon, Sun } from "lucide-react";
-import { motion } from "framer-motion";
+import { Loader2, Moon, Sun, UserPlus } from "lucide-react";
 import { register, login } from "../api/base44Client";
 
 export default function Register() {
@@ -58,6 +58,7 @@ export default function Register() {
 
     try {
       // Remover confirmPassword antes de enviar para a API
+      // eslint-disable-next-line no-unused-vars
       const { confirmPassword, ...registrationData } = formData;
       
       console.log("Enviando dados para registro:", registrationData);
@@ -120,29 +121,24 @@ export default function Register() {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md z-10"
       >
-        <div className="flex justify-center mb-6">
-          <motion.div 
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            transition={{ 
-              type: "spring", 
-              stiffness: 260, 
-              damping: 20,
-              delay: 0.2
-            }}
-            className="w-16 h-16 bg-gradient-purple rounded-xl flex items-center justify-center shadow-glow animate-pulse-slow"
-          >
-            <Sparkles className="w-8 h-8 text-white" />
-          </motion.div>
+        <div className="flex flex-col items-center space-y-4 mb-6">
+          <div className="flex items-center">
+            <img src="/img/logo.png" alt="BrandzLAB Logo" className="h-8 w-8 mr-2" />
+            <span className="text-2xl font-bold">
+              <span className="text-[#00b6ff]" style={{ fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 'bold' }}>Brandz</span>
+              <span className="text-[#736ded]" style={{ fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 'bold' }}>LAB</span>
+            </span>
+          </div>
+          <h1 className="text-2xl font-bold text-center">Cadastre-se para acessar os agentes IA da BrandzLAB</h1>
         </div>
         
         <Card className="glass-card border-border shadow-glass backdrop-blur-lg">
           <CardHeader className="space-y-1 text-center pb-2">
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-[#00b6ff] to-[#736ded] bg-clip-text text-transparent">
               Criar Conta
             </CardTitle>
             <CardDescription className="text-muted-foreground">
-              Cadastre-se para acessar os agentes IA da BrandAI
+              Cadastre-se para acessar os agentes IA da BrandzLAB
             </CardDescription>
           </CardHeader>
           <CardContent className="pt-4">
@@ -214,7 +210,7 @@ export default function Register() {
               
               <Button 
                 type="submit" 
-                className="w-full bg-gradient-purple hover:opacity-90 transition-all duration-300"
+                className="w-full bg-[#736ded] hover:bg-[#6058db] transition-all duration-300"
                 disabled={loading}
               >
                 {loading ? (
@@ -248,8 +244,8 @@ export default function Register() {
           </CardFooter>
         </Card>
         
-        <div className="mt-8 text-center text-xs text-muted-foreground">
-          © 2023 BrandAI. Todos os direitos reservados.
+        <div className="mt-8 text-center text-sm text-gray-500">
+          <p>© {new Date().getFullYear()} BrandzLAB. Todos os direitos reservados.</p>
         </div>
       </motion.div>
     </div>

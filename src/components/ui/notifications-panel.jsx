@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Bell, Check, ChevronRight, Star, Info, X, AlertCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Bell, ChevronRight, Info, X, MessageSquare } from "lucide-react";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import PropTypes from "prop-types";
@@ -17,8 +17,8 @@ const mockNotifications = [
   },
   {
     id: 2,
-    title: "Atualização de sistema",
-    message: "O BrandAI foi atualizado para a versão 2.0 com novas funcionalidades.",
+    title: "Nova atualização",
+    message: "O BrandzLAB foi atualizado para a versão 2.0 com novas funcionalidades.",
     type: "system",
     read: false,
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24) // 1 dia atrás
@@ -33,11 +33,13 @@ const mockNotifications = [
   }
 ];
 
-// Hook para obter as notificações
-export const useNotifications = () => {
+// Componente principal do painel de notificações
+const NotificationsPanel = ({ isOpen, onClose }) => {
   const [notifications, setNotifications] = useState(mockNotifications);
   const loading = false;
-
+  
+  const unreadCount = notifications.filter(n => !n.read).length;
+  
   const markAsRead = (id) => {
     setNotifications(prev => 
       prev.map(notif => 
@@ -52,39 +54,31 @@ export const useNotifications = () => {
     );
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  return { 
-    notifications, 
-    loading, 
-    unreadCount, 
-    markAsRead, 
-    markAllAsRead 
-  };
-};
-
-// Componente principal do painel de notificações
-const NotificationsPanel = ({ isOpen, onClose }) => {
-  const { 
-    notifications, 
-    loading, 
-    unreadCount, 
-    markAsRead, 
-    markAllAsRead 
-  } = useNotifications();
+  useEffect(() => {
+    console.log("NotificationsPanel montado, isOpen:", isOpen);
+    
+    // Função para fechar o painel quando clicar fora
+    const handleClickOutside = (event) => {
+      if (isOpen && !event.target.closest('.notifications-panel') && !event.target.closest('.notifications-container')) {
+        onClose();
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, onClose]);
 
   const getNotificationIcon = (type) => {
-    switch(type) {
-      case 'feature':
-        return <Star className="w-5 h-5 text-yellow-400" />;
+    switch (type) {
       case 'system':
-        return <Info className="w-5 h-5 text-blue-400" />;
-      case 'credit':
-        return <Check className="w-5 h-5 text-green-400" />;
-      case 'alert':
-        return <AlertCircle className="w-5 h-5 text-red-400" />;
+        return <Bell className="w-5 h-5 text-[#736ded]" />;
+      case 'message':
+        return <MessageSquare className="w-5 h-5 text-green-400" />;
+      case 'info':
       default:
-        return <Bell className="w-5 h-5 text-primary" />;
+        return <Info className="w-5 h-5 text-[#00b6ff]" />;
     }
   };
 
@@ -124,7 +118,7 @@ const NotificationsPanel = ({ isOpen, onClose }) => {
       
       {/* Painel de notificações */}
       <div 
-        className="fixed top-16 right-4 z-[1001] min-w-[320px] max-w-[400px]"
+        className="fixed top-16 right-4 z-[1001] min-w-[320px] max-w-[400px] notifications-panel"
       >
         <motion.div
           initial={{ opacity: 0, y: 10 }}
