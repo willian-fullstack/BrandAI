@@ -807,12 +807,57 @@ const findAndReadFile = (filePath) => {
     // Nome do arquivo
     const fileName = path.basename(normalizedPath);
     
+    // Extrair o código do agente do caminho (se existir)
+    let agenteId = null;
+    const trainingMatch = normalizedPath.match(/\/training\/([^/]+)\//);
+    if (trainingMatch && trainingMatch[1]) {
+      agenteId = trainingMatch[1];
+    }
+    
     // Verificar extensões permitidas
     const allowedExtensions = ['.txt', '.md', '.csv', '.json', '.xml', '.html', '.htm', '.pdf', '.doc', '.docx'];
     const fileExt = path.extname(fileName).toLowerCase();
     
     if (!allowedExtensions.includes(fileExt)) {
       return { found: false, error: 'Tipo de arquivo não permitido' };
+    }
+    
+    // Lista de caminhos possíveis para tentar
+    const possiblePaths = [];
+    
+    // Caminho original (relativo)
+    possiblePaths.push(path.join(__dirname, '..', normalizedPath.replace(/^\//, '')));
+    
+    // Se temos o ID do agente, adicionar caminhos específicos do agente
+    if (agenteId) {
+      possiblePaths.push(path.join(__dirname, '..', 'uploads', 'training', agenteId, fileName));
+    }
+    
+    // Adicionar caminhos genéricos
+    possiblePaths.push(path.join(__dirname, '..', 'uploads', 'training', fileName));
+    possiblePaths.push(path.join(__dirname, '..', 'uploads', fileName));
+    
+    // Tentar variações com timestamp no nome do arquivo
+    if (fileName.includes('-')) {
+      const fileNameWithoutTimestamp = fileName.replace(/^\d+-/, '');
+      if (agenteId) {
+        possiblePaths.push(path.join(__dirname, '..', 'uploads', 'training', agenteId, fileNameWithoutTimestamp));
+      }
+      possiblePaths.push(path.join(__dirname, '..', 'uploads', 'training', fileNameWithoutTimestamp));
+      possiblePaths.push(path.join(__dirname, '..', 'uploads', fileNameWithoutTimestamp));
+    }
+    
+    // Tentar cada caminho possível
+    for (const possiblePath of possiblePaths) {
+      if (fs.existsSync(possiblePath)) {
+        try {
+          const content = fs.readFileSync(possiblePath, 'utf8');
+          console.log(`Arquivo encontrado em caminho alternativo: ${possiblePath}`);
+          return { found: true, content, path: possiblePath };
+        } catch (readError) {
+          console.error(`Erro ao ler arquivo ${possiblePath}:`, readError);
+        }
+      }
     }
     
     // Para cada diretório permitido, verificar se o arquivo existe
@@ -836,8 +881,9 @@ const findAndReadFile = (filePath) => {
             return { found: true, content, path: subPath };
           }
         }
-      } catch (_) {
+      } catch (error) {
         // Ignorar erros de acesso a diretórios
+        console.debug(`Erro ao acessar diretório: ${error.message}`);
       }
     }
     

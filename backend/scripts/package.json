@@ -1,0 +1,14 @@
+{
+  "name": "document-fix-scripts",
+  "version": "1.0.0",
+  "description": "Scripts to fix document paths in the database",
+  "main": "fix-document-paths.js",
+  "type": "commonjs",
+  "scripts": {
+    "fix-paths": "node fix-document-paths.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "mongoose": "^7.0.0"
+  }
+} 
