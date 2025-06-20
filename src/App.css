@@ -1,0 +1,76 @@
+/* Efeito de glow para o fundo da hero */
+.hero-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 70%;
+  height: 70%;
+  background: radial-gradient(
+    circle, 
+    rgba(115, 109, 237, 0.2) 0%, 
+    rgba(0, 182, 255, 0.15) 25%, 
+    rgba(138, 43, 226, 0.1) 50%, 
+    rgba(0, 0, 0, 0) 75%
+  );
+  border-radius: 50%;
+  z-index: 0;
+  pointer-events: none;
+  animation: pulse 8s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+}
+
+/* Efeitos para o sistema de partículas */
+canvas {
+  backdrop-filter: blur(1px);
+}
+
+/* Animação para o título da hero */
+.hero-heading {
+  animation: fadeInUp 1.2s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Animação para o container de vídeo */
+.hero-video-container {
+  animation: fadeIn 1.5s ease-out 0.3s both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Efeito de brilho nos botões */
+.btn-glow:hover {
+  box-shadow: 0 0 15px rgba(115, 109, 237, 0.6);
+  transition: box-shadow 0.3s ease;
+}

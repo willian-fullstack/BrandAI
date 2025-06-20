@@ -19,7 +19,7 @@ import {
   Check,
   LogIn
 } from "lucide-react";
-import Brain3DViewer from '@/components/Brain3DModel';
+import ParticleSystem from '@/components/ParticleSystem';
 import { useState, useEffect } from 'react';
 import { ConfiguracaoPlanos } from '@/api/entities';
 import { Badge } from "@/components/ui/badge";
@@ -63,17 +63,17 @@ const Hero = () => {
       {/* Background glow effect */}
       <div className="hero-glow"></div>
       
-      {/* 3D Brain Model como background */}
-      <div className="absolute inset-0 z-0">
-        <Brain3DViewer />
+      {/* Sistema de partículas como background */}
+      <div className="absolute inset-0 z-10 pointer-events-auto">
+        <ParticleSystem />
       </div>
       
       {/* Overlay escuro para melhorar legibilidade */}
-      <div className="absolute inset-0 bg-black/70 z-0"></div>
+      <div className="absolute inset-0 bg-black/30 z-20 pointer-events-none"></div>
       
-      {/* New feature badge */}
-      <div className="container mx-auto px-4 relative z-10 flex flex-col items-center justify-center">
-        <div className="flex justify-center mb-6">
+      <div className="container mx-auto px-4 relative z-30 flex flex-col items-center justify-center pointer-events-none">
+        {/* New feature badge */}
+        <div className="flex justify-center mb-6 pointer-events-auto">
           <div className="flex items-center space-x-2 bg-black/50 border border-[#736ded]/30 rounded-full px-3 py-1">
             <span className="flex h-2 w-2 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#736ded] opacity-75"></span>
@@ -87,7 +87,7 @@ const Hero = () => {
           IA Especializada para <span className="bg-gradient-to-r from-[#00b6ff] to-[#736ded] bg-clip-text text-transparent">Marcas de Moda</span>
         </h1>
         
-        <div className="flex items-center justify-center mb-6">
+        <div className="flex items-center justify-center mb-6 pointer-events-auto">
           <img src="/img/logo.png" alt="BrandzLAB Logo" className="h-16 w-16 mr-3" />
           <h2 className="text-4xl font-bold">
             <span className="text-[#00b6ff]" style={{ fontFamily: 'Helvetica, Arial, sans-serif', fontWeight: 'bold' }}>Brandz</span>
@@ -103,9 +103,23 @@ const Hero = () => {
           Marcas usando o BrandzLAB relatam aumento de até 73% nas vendas online e redução de 26% nos custos de produção
         </p>
         
-        <div className="flex justify-center">
+        {/* Área para vídeo - semelhante à imagem de referência */}
+        <div className="w-full max-w-4xl mx-auto mt-8 mb-10 bg-black/80 border border-gray-800/30 rounded-xl overflow-hidden shadow-2xl hero-video-container pointer-events-auto">
+          <div className="aspect-video w-full h-full flex items-center justify-center bg-gradient-to-b from-gray-900/40 to-black">
+            {/* Placeholder para o vídeo que será adicionado posteriormente */}
+            <div className="text-gray-400 text-center p-8">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p>Vídeo demonstrativo será adicionado aqui</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex justify-center pointer-events-auto">
           <Link to="/login">
-            <Button className="bg-[#736ded] hover:bg-[#6058db] text-white text-lg px-8 py-6 rounded-md">
+            <Button className="bg-[#736ded] hover:bg-[#6058db] text-white text-lg px-8 py-6 rounded-md btn-glow">
               Começar agora <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </Link>
