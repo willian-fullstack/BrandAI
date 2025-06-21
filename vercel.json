@@ -8,7 +8,7 @@
       "dest": "/assets/$1"
     },
     {
-      "src": "/(.*\\.(js|css|ico|png|jpg|jpeg|svg|webp|gif|woff|woff2|ttf|eot)$)",
+      "src": "/(.*\\.(js|css|ico|png|jpg|jpeg|svg|webp|gif|mp4|woff|woff2|ttf|eot)$)",
       "dest": "/$1"
     },
     {
