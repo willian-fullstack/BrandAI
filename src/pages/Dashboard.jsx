@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { User } from "@/api/entities";
 import { Conversa } from "@/api/entities";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -26,10 +26,12 @@ import { agentesConfig, planosConfig } from "@/config/agentes";
 import ThemeToggle from "@/components/ui/theme-toggle";
 import { AgenteConfig } from "@/api/entities";
 import { Input } from "@/components/ui/input";
+import UsageChart from "@/components/charts/UsageChart";
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [conversas, setConversas] = useState([]);
+  const [todasConversas, setTodasConversas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [agenteUsageData, setAgenteUsageData] = useState({});
   const [agentesConfigs, setAgentesConfigs] = useState([]);
@@ -49,11 +51,12 @@ export default function Dashboard() {
       setConversas(conversasData);
       
       // Processar dados de uso de agentes
-      const todasConversas = await Conversa.filter({ usuario_id: userData.id }, '-updated_date');
+      const todasConversasData = await Conversa.filter({ usuario_id: userData.id }, '-updated_date');
+      setTodasConversas(todasConversasData);
       const usageCounts = {};
       
       // Contar uso de cada agente
-      todasConversas.forEach(conversa => {
+      todasConversasData.forEach(conversa => {
         const agenteId = conversa.agente_id;
         if (agenteId && agentesConfig[agenteId]) {
           usageCounts[agenteId] = (usageCounts[agenteId] || 0) + 1;
@@ -321,7 +324,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-muted-foreground text-sm">Conversas</p>
-                  <p className="text-3xl font-bold mt-1">{conversas.length}</p>
+                  <p className="text-3xl font-bold mt-1">{todasConversas.length}</p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-blue rounded-xl flex items-center justify-center shadow-glow">
                   <TrendingUp className="w-6 h-6 text-white" />
@@ -359,72 +362,32 @@ export default function Dashboard() {
         transition={{ delay: 0.5 }}
         className="mb-8"
       >
-        <Card className="glass-card">
-          <CardHeader className="pb-0">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xl font-semibold">Uso de Agentes IA</CardTitle>
-              <Badge variant="outline" className="border-primary text-primary">
-                Agentes mais utilizados
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="p-6">
-            {agenteChartData.length > 0 ? (
-              <div className="h-64 w-full">
-                <div className="flex h-full items-end gap-2">
-                  <div className="relative h-full w-full">
-                    <div className="absolute bottom-0 left-0 right-0 top-0 grid grid-cols-1 sm:grid-cols-3 md:grid-cols-6 gap-2">
-                      {agenteChartData.map((agente) => (
-                        <div 
-                          key={agente.id} 
-                          className="flex flex-col justify-end cursor-pointer group h-full"
-                          onClick={() => navegarParaAgente(agente.id)}
-                        >
-                          <div className="relative h-full flex flex-col justify-end">
-                            <div 
-                              className={`bg-gradient-to-br ${
-                                agente.cor || 'from-gray-500 to-gray-600'
-                              } opacity-80 rounded-t-md transition-all duration-300 group-hover:opacity-100`} 
-                              style={{ height: `${Math.max(20, (agente.count / maxUsage) * 100)}%`, minHeight: '20px' }}
-                            >
-                              <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                                {agente.count} {agente.count === 1 ? 'uso' : 'usos'}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 md:grid-cols-6 gap-2 text-xs text-muted-foreground">
-                  {agenteChartData.map((agente) => (
-                    <div key={agente.id} className="truncate text-center px-1" title={agente.nome}>
-                      {agente.nome}
-                    </div>
-                  ))}
-                </div>
+        {agenteChartData.length > 0 ? (
+          <UsageChart 
+            data={agenteChartData}
+            maxValue={maxUsage}
+            onAgenteClick={navegarParaAgente}
+          />
+        ) : (
+          <Card className="glass-card">
+            <CardContent className="p-6 text-center">
+              <div className="w-16 h-16 bg-slate-700/30 rounded-full flex items-center justify-center mb-4 mx-auto">
+                <MessageSquare className="w-8 h-8 text-slate-400" />
               </div>
-            ) : (
-              <div className="h-64 w-full flex flex-col items-center justify-center">
-                <div className="w-16 h-16 bg-slate-700/30 rounded-full flex items-center justify-center mb-4">
-                  <MessageSquare className="w-8 h-8 text-slate-400" />
-                </div>
-                <p className="text-muted-foreground mb-2">Nenhum uso de agente registrado</p>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Comece a conversar com agentes para ver estatísticas de uso
-                </p>
-                <Button 
-                  className="bg-gradient-purple hover:opacity-90"
-                  onClick={() => navigate('/agentes')}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Explorar Agentes
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              <p className="text-muted-foreground mb-2">Nenhum uso de agente registrado</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Comece a conversar com agentes para ver estatísticas de uso
+              </p>
+              <Button 
+                className="bg-gradient-purple hover:opacity-90"
+                onClick={() => navigate('/agentes')}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Explorar Agentes
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </motion.div>
 
       {/* Seção de conversas recentes */}

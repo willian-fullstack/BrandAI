@@ -103,18 +103,18 @@ const Hero = () => {
           Marcas usando o BrandzLAB relatam aumento de até 73% nas vendas online e redução de 26% nos custos de produção
         </p>
         
-        {/* Área para vídeo - semelhante à imagem de referência */}
+        {/* Vídeo demonstrativo */}
         <div className="w-full max-w-4xl mx-auto mt-8 mb-10 bg-black/80 border border-gray-800/30 rounded-xl overflow-hidden shadow-2xl hero-video-container pointer-events-auto">
-          <div className="aspect-video w-full h-full flex items-center justify-center bg-gradient-to-b from-gray-900/40 to-black">
-            {/* Placeholder para o vídeo que será adicionado posteriormente */}
-            <div className="text-gray-400 text-center p-8">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p>Vídeo demonstrativo será adicionado aqui</p>
-            </div>
-          </div>
+          <video 
+            className="w-full block"
+            autoPlay
+            muted
+            loop
+            playsInline
+            src="/videos/video1.mp4"
+          >
+            Seu navegador não suporta a reprodução de vídeos.
+          </video>
         </div>
         
         <div className="flex justify-center pointer-events-auto">

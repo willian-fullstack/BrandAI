@@ -519,6 +519,67 @@ Ambas as páginas utilizam as mesmas configurações definidas pelo administrado
 - **Recursos**: Lista de recursos para cada plano, com cada item exibido como uma linha separada
 - **Ofertas**: Configuração de preços promocionais com exibição de preços riscados
 
-## Sistema de Ofertas e Cupons
+## Vídeo na Seção Hero
 
-// ... rest of the existing content ... 
+### Visão Geral
+
+A seção hero da página inicial inclui um vídeo demonstrativo que é reproduzido automaticamente quando a página é carregada. O vídeo é exibido em um container estilizado que mantém a consistência visual com o restante da interface.
+
+### Implementação Técnica
+
+O vídeo está implementado no componente `Hero` em `src/pages/Home.jsx` usando a tag HTML5 `<video>` com os seguintes atributos:
+
+```jsx
+<video 
+  className="w-full block"
+  autoPlay
+  muted
+  loop
+  playsInline
+  src="/videos/video1.mp4"
+>
+  Seu navegador não suporta a reprodução de vídeos.
+</video>
+```
+
+### Atributos do Vídeo
+
+1. **autoPlay**: Inicia a reprodução automaticamente quando a página carrega
+2. **muted**: Reproduz sem áudio (necessário para autoplay em muitos navegadores)
+3. **loop**: Reproduz o vídeo em loop contínuo
+4. **playsInline**: Reproduz inline em dispositivos móveis em vez de tela cheia
+5. **className="w-full block"**: Garante que o vídeo ocupe toda a largura disponível e seja exibido como um elemento de bloco
+
+### Estrutura de Arquivos
+
+O arquivo de vídeo está localizado em:
+- `/public/videos/video1.mp4`
+
+### Estilização
+
+O container do vídeo utiliza as seguintes classes CSS:
+- `hero-video-container`: Classe que aplica animação de fade-in ao carregar a página
+- `w-full max-w-4xl mx-auto`: Controla a largura máxima e centraliza o vídeo
+- `bg-black/80 border border-gray-800/30`: Aplica fundo escuro e borda sutil
+- `rounded-xl overflow-hidden shadow-2xl`: Adiciona cantos arredondados e sombra
+
+### Considerações de Performance
+
+1. **Formato do Vídeo**: MP4 com codificação H.264 para melhor compatibilidade
+2. **Tamanho do Arquivo**: O vídeo deve ser otimizado para web para carregamento rápido
+3. **Fallback**: Texto alternativo para navegadores que não suportam vídeo HTML5
+
+### Responsividade
+
+O vídeo se adapta a diferentes tamanhos de tela:
+- Em dispositivos móveis: Ocupa a largura total disponível
+- Em dispositivos maiores: Respeita a largura máxima definida (`max-w-4xl`)
+- A proporção de aspecto original do vídeo é mantida automaticamente
+- A estrutura simplificada (sem divs aninhados desnecessários) garante que o vídeo mantenha suas proporções originais
+
+### Solução de Problemas
+
+Se o vídeo aparecer cortado:
+1. Verifique se não há restrições de altura (height) aplicadas ao vídeo ou seu container
+2. Certifique-se de que o vídeo está diretamente dentro do container principal, sem divs intermediários com restrições de tamanho
+3. Use a classe `block` no vídeo para garantir que ele seja tratado como um elemento de bloco 
